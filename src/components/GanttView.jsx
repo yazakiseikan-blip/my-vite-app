@@ -10,7 +10,7 @@ export default function GanttView() {
   const setEvents = useStore(s => s.setEvents)
   const setScreenMode = useStore(s => s.setScreenMode)
   const dailyNoCount = new Set(
-  events.map(e => e.dailyNo).filter(Boolean)
+    events.map(e => e.dailyNo).filter(Boolean)
   ).size
 
   const [history, setHistory] = useState([])
@@ -167,10 +167,10 @@ export default function GanttView() {
           return prev
         }
 
-          // 日報番号の重複を除いて件数を数える
+        // 日報番号の重複を除いて件数を数える
         const dailyNoCount = new Set(
-           filtered.map(e => e.dailyNo)
-          ).size
+          filtered.map(e => e.dailyNo)
+        ).size
 
         alert(`日報番号 ${dailyNoCount}件 取り込みました`)
         return [...prev, ...filtered]
@@ -224,11 +224,11 @@ export default function GanttView() {
         prev.map(ev =>
           ev.id === last.id
             ? {
-                ...ev,
-                start: last.before.start,
-                end: last.before.end,
-                resourceId: last.before.resourceId
-              }
+              ...ev,
+              start: last.before.start,
+              end: last.before.end,
+              resourceId: last.before.resourceId
+            }
             : ev
         )
       )
@@ -254,11 +254,11 @@ export default function GanttView() {
         prev.map(ev =>
           ev.id === last.id
             ? {
-                ...ev,
-                start: last.after.start,
-                end: last.after.end,
-                resourceId: last.after.resourceId
-              }
+              ...ev,
+              start: last.after.start,
+              end: last.after.end,
+              resourceId: last.after.resourceId
+            }
             : ev
         )
       )
@@ -396,193 +396,193 @@ export default function GanttView() {
   }
 
   const saveJson = () => {
-  const json = JSON.stringify(events, null, 2)
+    const json = JSON.stringify(events, null, 2)
 
-  const blob = new Blob([json], {
-    type: "application/json"
-  })
+    const blob = new Blob([json], {
+      type: "application/json"
+    })
 
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
 
-  a.href = url
-  a.download = `工程ガント_${new Date().toISOString().slice(0, 10)}.json`
-  a.click()
+    a.href = url
+    a.download = `工程ガント_${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
 
-  URL.revokeObjectURL(url)
+    URL.revokeObjectURL(url)
 
-  alert("JSONを保存しました")
-}
+    alert("JSONを保存しました")
+  }
 
-const loadJson = (event) => {
-  const file = event.target.files[0]
-  if (!file) return
+  const loadJson = (event) => {
+    const file = event.target.files[0]
+    if (!file) return
 
-  const reader = new FileReader()
+    const reader = new FileReader()
 
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result)
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result)
 
-      if (!Array.isArray(data)) {
-        alert("JSON形式が正しくありません")
+        if (!Array.isArray(data)) {
+          alert("JSON形式が正しくありません")
+          return
+        }
+
+        setEvents(data)
+        alert(`${data.length}工程を読み込みました`)
+      } catch (error) {
+        alert("JSONの読み込みに失敗しました")
+      }
+    }
+
+    reader.readAsText(file, "UTF-8")
+    event.target.value = ""
+  }
+
+  const handleEventDrop = (info) => {
+    const movedEvent = info.event
+    const before = events.find(ev => ev.id === movedEvent.id)
+    if (!before) return
+
+    const newResourceId =
+      movedEvent.getResources()?.[0]?.id || before.resourceId
+
+    const newStart = movedEvent.startStr
+    const newEnd = movedEvent.endStr || ensureEnd(newStart, newStart)
+
+    const movedAfter = {
+      ...before,
+      start: newStart,
+      end: newEnd,
+      resourceId: newResourceId
+    }
+
+    const sameDailyEvents = events
+      .filter(e => e.dailyNo === before.dailyNo && e.id !== before.id)
+      .concat(movedAfter)
+      .sort((a, b) => a.order - b.order)
+
+    for (let i = 0; i < sameDailyEvents.length - 1; i++) {
+      const current = sameDailyEvents[i]
+      const next = sameDailyEvents[i + 1]
+
+      const currentStart = new Date(current.start)
+      const nextStart = new Date(next.start)
+
+      if (currentStart > nextStart) {
+        alert(
+          `工程順序が逆転するため、ドラッグ移動できません。\n\n` +
+          `前工程：${current.process}\n` +
+          `次工程：${next.process}\n\n` +
+          `順番を変更したい場合は、右側パネルの ▲ ▼ を使用してください。`
+        )
+
+        info.revert()
         return
       }
-
-      setEvents(data)
-      alert(`${data.length}工程を読み込みました`)
-    } catch (error) {
-      alert("JSONの読み込みに失敗しました")
     }
-  }
 
-  reader.readAsText(file, "UTF-8")
-  event.target.value = ""
-}
-
-const handleEventDrop = (info) => {
-  const movedEvent = info.event
-  const before = events.find(ev => ev.id === movedEvent.id)
-  if (!before) return
-
-  const newResourceId =
-    movedEvent.getResources()?.[0]?.id || before.resourceId
-
-  const newStart = movedEvent.startStr
-  const newEnd = movedEvent.endStr || ensureEnd(newStart, newStart)
-
-  const movedAfter = {
-    ...before,
-    start: newStart,
-    end: newEnd,
-    resourceId: newResourceId
-  }
-
-  const sameDailyEvents = events
-    .filter(e => e.dailyNo === before.dailyNo && e.id !== before.id)
-    .concat(movedAfter)
-    .sort((a, b) => a.order - b.order)
-
-  for (let i = 0; i < sameDailyEvents.length - 1; i++) {
-    const current = sameDailyEvents[i]
-    const next = sameDailyEvents[i + 1]
-
-    const currentStart = new Date(current.start)
-    const nextStart = new Date(next.start)
-
-    if (currentStart > nextStart) {
-      alert(
-        `工程順序が逆転するため、ドラッグ移動できません。\n\n` +
-        `前工程：${current.process}\n` +
-        `次工程：${next.process}\n\n` +
-        `順番を変更したい場合は、右側パネルの ▲ ▼ を使用してください。`
-      )
-
-      info.revert()
-      return
-    }
-  }
-
-  setHistory(prev => [
-    ...prev,
-    {
-      type: "move",
-      id: movedEvent.id,
-      time: new Date().toISOString(),
-      before,
-      after: {
-        start: newStart,
-        end: newEnd,
-        resourceId: newResourceId
+    setHistory(prev => [
+      ...prev,
+      {
+        type: "move",
+        id: movedEvent.id,
+        time: new Date().toISOString(),
+        before,
+        after: {
+          start: newStart,
+          end: newEnd,
+          resourceId: newResourceId
+        }
       }
-    }
-  ])
+    ])
 
-  setEvents(prev =>
-    prev.map(ev =>
-      ev.id === movedEvent.id
-        ? {
+    setEvents(prev =>
+      prev.map(ev =>
+        ev.id === movedEvent.id
+          ? {
             ...ev,
             start: newStart,
             end: newEnd,
             resourceId: newResourceId
           }
-        : ev
+          : ev
+      )
     )
-  )
 
-  setRedoStack([])
-}
-
-const handleEventDidMount = (info) => {
-  const e = info.event
-
-  const toDate = (str) =>
-    new Date(str).toLocaleDateString("sv-SE")
-
-  const today = toDate(new Date())
-  const startDate = toDate(e.start)
-
-  const isCompleted =
-    e.extendedProps.isCompleted ?? false
-
-  const logs =
-    e.extendedProps.workLogs || []
-
-  const lastLog =
-    logs.length > 0
-      ? logs[logs.length - 1]
-      : null
-
-  const isWorking =
-    lastLog &&
-    !lastLog.end &&
-    !isCompleted
-
-  const isDelayed =
-    !isCompleted &&
-    !isWorking &&
-    startDate <= today
-
-  // 共通
-  info.el.style.borderRadius = "8px"
-  info.el.style.border = "none"
-  info.el.style.boxShadow =
-    "0 4px 10px rgba(0,0,0,0.18)"
-  info.el.style.fontWeight = "800"
-  info.el.style.padding = "2px 4px"
-  info.el.style.minWidth = "90px"
-
-  // いったんリセット
-  info.el.style.animation = "none"
-
-  // ✅ 完了
-  if (isCompleted) {
-    info.el.style.background = "#16a34a"
-    info.el.style.color = "#fff"
-    return
+    setRedoStack([])
   }
 
-  // ✅ 着手中
-  if (isWorking) {
-    info.el.style.background = "#2563eb"
-    info.el.style.color = "#fff"
-    info.el.style.animation = "blink 1s infinite"
-    return
-  }
+  const handleEventDidMount = (info) => {
+    const e = info.event
 
-  // ✅ 未仕掛遅れ
-  if (isDelayed) {
-    info.el.style.background = "#ef4444"
-    info.el.style.color = "#fff"
-    info.el.style.animation = "blink 1s infinite"
-    return
-  }
+    const toDate = (str) =>
+      new Date(str).toLocaleDateString("sv-SE")
 
-  // ✅ 予定
-  info.el.style.background = "#9ca3af"
-  info.el.style.color = "#fff"
-}
+    const today = toDate(new Date())
+    const startDate = toDate(e.start)
+
+    const isCompleted =
+      e.extendedProps.isCompleted ?? false
+
+    const logs =
+      e.extendedProps.workLogs || []
+
+    const lastLog =
+      logs.length > 0
+        ? logs[logs.length - 1]
+        : null
+
+    const isWorking =
+      lastLog &&
+      !lastLog.end &&
+      !isCompleted
+
+    const isDelayed =
+      !isCompleted &&
+      !isWorking &&
+      startDate <= today
+
+    // 共通
+    info.el.style.borderRadius = "8px"
+    info.el.style.border = "none"
+    info.el.style.boxShadow =
+      "0 4px 10px rgba(0,0,0,0.18)"
+    info.el.style.fontWeight = "800"
+    info.el.style.padding = "2px 4px"
+    info.el.style.minWidth = "90px"
+
+    // いったんリセット
+    info.el.style.animation = "none"
+
+    // ✅ 完了
+    if (isCompleted) {
+      info.el.style.background = "#16a34a"
+      info.el.style.color = "#fff"
+      return
+    }
+
+    // ✅ 着手中
+    if (isWorking) {
+      info.el.style.background = "#2563eb"
+      info.el.style.color = "#fff"
+      info.el.style.animation = "blink 1s infinite"
+      return
+    }
+
+    // ✅ 未仕掛遅れ
+    if (isDelayed) {
+      info.el.style.background = "#ef4444"
+      info.el.style.color = "#fff"
+      info.el.style.animation = "blink 1s infinite"
+      return
+    }
+
+    // ✅ 予定
+    info.el.style.background = "#9ca3af"
+    info.el.style.color = "#fff"
+  }
 
   return (
     <div style={styles.page}>
@@ -595,646 +595,647 @@ const handleEventDidMount = (info) => {
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
-         <button
-             onClick={() => setScreenMode("tablet")}
-             style={styles.tabletButton}
+          <button
+            onClick={() => setScreenMode("tablet")}
+            style={styles.tabletButton}
           >
-          タブレット
-         </button>
+            タブレット
+          </button>
 
-        <button
-             onClick={() => setScreenMode("login")}
-             style={styles.tabletButton}
-        >
-          ログアウト
-        </button>
-      </div>
-
-      <div style={styles.statusRow}>
-        <div style={styles.statusCard}>
-          <div style={styles.statusLabel}>日報番号件数</div>
-          <div style={styles.statusValue}>{dailyNoCount}</div>
+          <button
+            onClick={() => setScreenMode("login")}
+            style={styles.tabletButton}
+          >
+            ログアウト
+          </button>
         </div>
 
-        <div style={styles.statusCard}>
-          <div style={styles.statusLabel}>変更履歴</div>
-          <div style={styles.statusValue}>{history.length}</div>
+        <div style={styles.statusRow}>
+          <div style={styles.statusCard}>
+            <div style={styles.statusLabel}>日報番号件数</div>
+            <div style={styles.statusValue}>{dailyNoCount}</div>
+          </div>
+
+          <div style={styles.statusCard}>
+            <div style={styles.statusLabel}>変更履歴</div>
+            <div style={styles.statusValue}>{history.length}</div>
+          </div>
+
+          <div style={styles.statusCard}>
+            <div style={styles.statusLabel}>設備数</div>
+            <div style={styles.statusValue}>{resources.length}</div>
+          </div>
         </div>
 
-        <div style={styles.statusCard}>
-          <div style={styles.statusLabel}>設備数</div>
-          <div style={styles.statusValue}>{resources.length}</div>
+        <div style={styles.toolbarArea}>
+          <div style={styles.toolbarGroup}>
+            <div style={styles.toolbarTitle}>計画操作</div>
+
+            <label style={styles.primaryButton}>
+              CSV取込
+              <input
+                type="file"
+                style={{ display: "none" }}
+                onChange={importMultiOrderCsv}
+              />
+            </label>
+
+            <button
+              onClick={saveJson}
+              style={styles.successButton}
+            >
+              計画保存
+            </button>
+
+            <label style={styles.primaryButton}>
+              計画読込
+              <input
+                type="file"
+                accept=".json"
+                style={{ display: "none" }}
+                onChange={loadJson}
+              />
+            </label>
+
+            <button onClick={undoLast} style={styles.toolButton}>
+              戻る
+            </button>
+
+            <button onClick={redoLast} style={styles.toolButton}>
+              やり直し
+            </button>
+
+            <button
+              onClick={exportHistory}
+              style={styles.successButton}
+            >
+              計画確定
+            </button>
+          </div>
+
+          <div style={styles.dangerGroup}>
+            <div style={styles.toolbarTitle}>危険操作</div>
+
+            <button
+              onClick={() => setEvents([])}
+              style={styles.dangerButton}
+            >
+              全部削除
+            </button>
+
+            <button
+              onClick={() => {
+                setEvents([])
+                setHistory([])
+                setRedoStack([])
+              }}
+              style={styles.dangerButton}
+            >
+              全部リセット
+            </button>
+          </div>
         </div>
-      </div>
 
-<div style={styles.toolbarArea}>
-  <div style={styles.toolbarGroup}>
-    <div style={styles.toolbarTitle}>計画操作</div>
+        <div style={styles.calendarCard}>
+          <FullCalendar
+            resourceAreaHeaderContent="設備"
+            resourceOrder="sortOrder"
+            schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
+            locale={jaLocale}
+            plugins={[resourceTimelinePlugin, interactionPlugin]}
+            initialView="resourceTimelineWeek"
+            initialDate="2026-06-04"
+            height="620px"
 
-    <label style={styles.primaryButton}>
-      CSV取込
-      <input
-        type="file"
-        style={{ display: "none" }}
-        onChange={importMultiOrderCsv}
-      />
-    </label>
+            headerToolbar={{
+              left: "prev,next today",
+              center: "title",
+              right: "resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth"
+            }}
 
-    <button
-      onClick={saveJson}
-      style={styles.successButton}
-    >
-      計画保存
-    </button>
+            titleFormat={{
+              year: "numeric",
+              month: "long"
+            }}
 
-    <label style={styles.primaryButton}>
-      計画読込
-      <input
-        type="file"
-        accept=".json"
-        style={{ display: "none" }}
-        onChange={loadJson}
-      />
-    </label>
+            eventMinWidth={90}
+            eventContent={(arg) => {
+              const dailyNo =
+                arg.event.extendedProps.dailyNo || ""
 
-    <button onClick={undoLast} style={styles.toolButton}>
-      戻る
-    </button>
+              const process =
+                arg.event.extendedProps.process || ""
 
-    <button onClick={redoLast} style={styles.toolButton}>
-      やり直し
-    </button>
+              return (
+                <div
+                  style={{
+                    width: "100%",
+                    overflow: "hidden",
+                    color: "#fff",
+                    padding: "2px 4px",
+                    lineHeight: "1.1"
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: "900"
+                    }}
+                  >
+                    {dailyNo}
+                  </div>
 
-    <button
-      onClick={exportHistory}
-      style={styles.successButton}
-    >
-      計画確定
-    </button>
-  </div>
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      opacity: 0.9,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap"
+                    }}
+                  >
+                    {process}
+                  </div>
+                </div>
+              )
 
-  <div style={styles.dangerGroup}>
-    <div style={styles.toolbarTitle}>危険操作</div>
+            }}
 
-    <button
-      onClick={() => setEvents([])}
-      style={styles.dangerButton}
-    >
-      全部削除
-    </button>
+            datesSet={() => {
+              console.log("datesSet実行")
 
-    <button
-      onClick={() => {
-        setEvents([])
-        setHistory([])
-        setRedoStack([])
-      }}
-      style={styles.dangerButton}
-    >
-      全部リセット
-    </button>
-  </div>
-</div>
+              setTimeout(() => {
+                console.log(
+                  document.querySelectorAll("[data-date]").length
+                )
+              }, 500)
+            }}
 
-      <div style={styles.calendarCard}>
-        <FullCalendar
-          resourceAreaHeaderContent="設備"
-          resourceOrder="sortOrder"
-          schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
-          locale={jaLocale}
-          plugins={[resourceTimelinePlugin, interactionPlugin]}
-          initialView="resourceTimelineWeek"
-          initialDate="2026-06-04"
-          height="620px"
-          
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth"
-          }}
+            dayHeaderDidMount={(arg) => {
+              console.log(arg.date)
 
-          titleFormat={{
-            year: "numeric",
-            month: "long"
-          }}
+              const day = arg.date.getDay()
 
-          eventMinWidth={90}
-eventContent={(arg) => {
-  const dailyNo =
-    arg.event.extendedProps.dailyNo || ""
+              if (day === 0) {
+                arg.el.style.backgroundColor = "red"
+              }
 
-  const process =
-    arg.event.extendedProps.process || ""
-
-  return (
-    <div
-      style={{
-        width: "100%",
-        overflow: "hidden",
-        color: "#fff",
-        padding: "2px 4px",
-        lineHeight: "1.1"
-      }}
-    >
-      <div
-        style={{
-          fontSize: "12px",
-          fontWeight: "900"
-        }}
-      >
-        {dailyNo}
-      </div>
-
-      <div
-        style={{
-          fontSize: "10px",
-          opacity: 0.9,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap"
-        }}
-      >
-        {process}
-      </div>
-    </div>
-  )
-
-}}
-
-datesSet={() => {
-  console.log("datesSet実行")
-
-  setTimeout(() => {
-    console.log(
-      document.querySelectorAll("[data-date]").length
-    )
-  }, 500)
-}}
-
-dayHeaderDidMount={(arg) => {
-  console.log(arg.date)
-
-  const day = arg.date.getDay()
-
-  if (day === 0) {
-    arg.el.style.backgroundColor = "red"
-  }
-
-  if (day === 6) {
-    arg.el.style.backgroundColor = "blue"
-  }
-}}
+              if (day === 6) {
+                arg.el.style.backgroundColor = "blue"
+              }
+            }}
 
 
-slotLabelContent={(arg) => {
-  if (arg.view.type === "resourceTimelineWeek") {
-    const level = arg.level
-    const hour = arg.date.getHours()
+            slotLabelContent={(arg) => {
+              if (arg.view.type === "resourceTimelineWeek") {
+                const level = arg.level
+                const hour = arg.date.getHours()
 
-    // 下段だけ 午前 / 午後 にする
-    if (level === 1) {
-      if (hour === 0) return "午前"
-      if (hour === 12) return "午後"
-    }
+                // 下段だけ 午前 / 午後 にする
+                if (level === 1) {
+                  if (hour === 0) return "午前"
+                  if (hour === 12) return "午後"
+                }
 
-    // 上段は日付を表示
-    if (level === 0) {
-      return arg.text
-    }
-  }
+                // 上段は日付を表示
+                if (level === 0) {
+                  return arg.text
+                }
+              }
 
-  return arg.text
-}}
+              return arg.text
+            }}
 
-   views={{
-     // 日表示
-     resourceTimelineDay: {
-       type: "resourceTimeline",
-       duration: { days: 1 },
+            views={{
+              // 日表示
+              resourceTimelineDay: {
+                type: "resourceTimeline",
+                duration: { days: 1 },
 
-     slotDuration: { hours: 1 },
+                slotDuration: { hours: 1 },
 
-     slotLabelFormat: {
-       hour: "numeric"
-      }
-    },
+                slotLabelFormat: {
+                  hour: "numeric"
+                }
+              },
 
-  // 週表示
-    resourceTimelineWeek: {
-      type: "resourceTimeline",
-      duration: { weeks: 1 },
-      slotDuration: { hours: 12 },
-      slotMinWidth: 70,
-      slotLabelFormat: [
-     {
-       month: "numeric",
-       day: "numeric",
-       weekday: "short"
-     },
-    {
-      hour: "numeric"
-    }
-  ]
-  },
+              // 週表示
+              resourceTimelineWeek: {
+                type: "resourceTimeline",
+                duration: { weeks: 1 },
+                slotDuration: { hours: 12 },
+                slotMinWidth: 70,
+                slotLabelFormat: [
+                  {
+                    month: "numeric",
+                    day: "numeric",
+                    weekday: "short"
+                  },
+                  {
+                    hour: "numeric"
+                  }
+                ]
+              },
 
-  // 月表示
-  resourceTimelineMonth: {
-    type: "resourceTimeline",
-    duration: { months: 1 },
+              // 月表示
+              resourceTimelineMonth: {
+                type: "resourceTimeline",
+                duration: { months: 1 },
 
-    slotDuration: { days: 1 },
+                slotDuration: { days: 1 },
 
-    slotLabelFormat: {
-      month: "numeric",
-      day: "numeric"
-    }
-  }
-}}
-          dateClick={() => {
-            setSelected(null)
-          }}
-          editable={true}
-          eventResourceEditable={true}
-          resources={resources}
-          events={
-            Array.isArray(events)
-              ? events.map(e => ({
+                slotLabelFormat: {
+                  month: "numeric",
+                  day: "numeric"
+                }
+              }
+            }}
+            dateClick={() => {
+              setSelected(null)
+            }}
+            editable={true}
+            eventResourceEditable={true}
+            resources={resources}
+            events={
+              Array.isArray(events)
+                ? events.map(e => ({
                   ...e,
                   start: e.start,
                   end: e.end || e.start
                 }))
-              : []
-          }
-          displayEventTime={false}
-          eventTimeFormat={false}
-          eventClick={(info) => {
-            setSelected(info.event)
-          }}
-          selectable={true}
-          select={() => {
-            setSelected(null)
-          }}
-          eventDrop={handleEventDrop}
-          eventDidMount={handleEventDidMount}
-        />
-      </div>
+                : []
+            }
+            displayEventTime={false}
+            eventTimeFormat={false}
+            eventClick={(info) => {
+              setSelected(info.event)
+            }}
+            selectable={true}
+            select={() => {
+              setSelected(null)
+            }}
+            eventDrop={handleEventDrop}
+            eventDidMount={handleEventDidMount}
+          />
+        </div>
 
-      {selected && (
-        <div style={styles.sidePanel}>
-          <div style={styles.sideHeader}>
-            <div>
-              <div style={styles.sideTitle}>
-                {selected.extendedProps.dailyNo}
+        {selected && (
+          <div style={styles.sidePanel}>
+            <div style={styles.sideHeader}>
+              <div>
+                <div style={styles.sideTitle}>
+                  {selected.extendedProps.dailyNo}
+                </div>
+                <div style={styles.sideSubTitle}>
+                  工程順序
+                </div>
               </div>
-              <div style={styles.sideSubTitle}>
-                工程順序
-              </div>
+
+              <button
+                onClick={() => setSelected(null)}
+                style={styles.closeButton}
+              >
+                ×
+              </button>
             </div>
 
-            <button
-              onClick={() => setSelected(null)}
-              style={styles.closeButton}
-            >
-              ×
-            </button>
+            {events
+              .filter(e => e.dailyNo === selected.extendedProps.dailyNo)
+              .sort((a, b) => a.order - b.order)
+              .map(r => {
+                const today = new Date().toISOString()
+                const isNow = r.start <= today && r.end >= today
+                const isPast = r.end < today
+
+                let bg = "#f3f4f6"
+                let label = "予定"
+
+                if (isNow) {
+                  bg = "#fef3c7"
+                  label = "進行中"
+                } else if (isPast) {
+                  bg = "#dcfce7"
+                  label = "完了予定"
+                }
+
+                return (
+                  <div
+                    key={r.id}
+                    style={{
+                      ...styles.sideItem,
+                      background: bg
+                    }}
+                  >
+                    <div style={styles.sideItemTop}>
+                      <div style={styles.sideItemHeader}>
+                        {isNow && "▶ "}
+                        {r.process}
+                      </div>
+
+                      <div style={styles.sideBadge}>
+                        {label}
+                      </div>
+                    </div>
+
+                    <div style={styles.sideInfo}>
+                      開始：{r.start?.substring(0, 10)}
+                    </div>
+
+                    <div style={styles.sideInfo}>
+                      工数：{r.work}h
+                    </div>
+
+                    <div style={styles.sideInfo}>
+                      設備：{r.resourceId}
+                    </div>
+
+                    <div style={styles.orderButtons}>
+                      <button
+                        onClick={() => moveUp(r.id)}
+                        style={styles.smallButton}
+                      >
+                        ▲
+                      </button>
+
+                      <button
+                        onClick={() => moveDown(r.id)}
+                        style={styles.smallButton}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
           </div>
-
-          {events
-            .filter(e => e.dailyNo === selected.extendedProps.dailyNo)
-            .sort((a, b) => a.order - b.order)
-            .map(r => {
-              const today = new Date().toISOString()
-              const isNow = r.start <= today && r.end >= today
-              const isPast = r.end < today
-
-              let bg = "#f3f4f6"
-              let label = "予定"
-
-              if (isNow) {
-                bg = "#fef3c7"
-                label = "進行中"
-              } else if (isPast) {
-                bg = "#dcfce7"
-                label = "完了予定"
-              }
-
-              return (
-                <div
-                  key={r.id}
-                  style={{
-                    ...styles.sideItem,
-                    background: bg
-                  }}
-                >
-                  <div style={styles.sideItemTop}>
-                    <div style={styles.sideItemHeader}>
-                      {isNow && "▶ "}
-                      {r.process}
-                    </div>
-
-                    <div style={styles.sideBadge}>
-                      {label}
-                    </div>
-                  </div>
-
-                  <div style={styles.sideInfo}>
-                    開始：{r.start?.substring(0, 10)}
-                  </div>
-
-                  <div style={styles.sideInfo}>
-                    工数：{r.work}h
-                  </div>
-
-                  <div style={styles.sideInfo}>
-                    設備：{r.resourceId}
-                  </div>
-
-                  <div style={styles.orderButtons}>
-                    <button
-                      onClick={() => moveUp(r.id)}
-                      style={styles.smallButton}
-                    >
-                      ▲
-                    </button>
-
-                    <button
-                      onClick={() => moveDown(r.id)}
-                      style={styles.smallButton}
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
 
-const styles = {
-  page: {
-    minHeight: "100vh",
-    padding: "20px",
-    background: "#eef2f7",
-    color: "#111827",
-    fontFamily:
+      const styles = {
+        page: {
+        minHeight: "100vh",
+      padding: "20px",
+      background: "#eef2f7",
+      color: "#111827",
+      fontFamily:
       "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
   },
 
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "18px"
+      header: {
+        display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "18px"
   },
 
-  appTitle: {
-    fontSize: "36px",
-    fontWeight: "900",
-    letterSpacing: "1px"
+      appTitle: {
+        fontSize: "36px",
+      fontWeight: "900",
+      letterSpacing: "1px"
   },
 
-  subTitle: {
-    fontSize: "18px",
-    color: "#6b7280",
-    marginTop: "4px"
+      subTitle: {
+        fontSize: "18px",
+      color: "#6b7280",
+      marginTop: "4px"
   },
 
-  tabletButton: {
-    fontSize: "20px",
-    fontWeight: "900",
-    padding: "14px 26px",
-    borderRadius: "18px",
-    border: "none",
-    background: "#111827",
-    color: "#fff",
-    cursor: "pointer",
-    boxShadow: "0 8px 18px rgba(0,0,0,0.2)"
+      tabletButton: {
+        fontSize: "20px",
+      fontWeight: "900",
+      padding: "14px 26px",
+      borderRadius: "18px",
+      border: "none",
+      background: "#111827",
+      color: "#fff",
+      cursor: "pointer",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.2)"
   },
 
-  statusRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "14px",
-    marginBottom: "16px"
+      statusRow: {
+        display: "grid",
+      gridTemplateColumns: "repeat(3, 1fr)",
+      gap: "14px",
+      marginBottom: "16px"
   },
 
-  statusCard: {
-    background: "#fff",
-    borderRadius: "20px",
-    padding: "18px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
+      statusCard: {
+        background: "#fff",
+      borderRadius: "20px",
+      padding: "18px",
+      boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
   },
 
-  statusLabel: {
-    fontSize: "16px",
-    color: "#6b7280",
-    fontWeight: "800"
+      statusLabel: {
+        fontSize: "16px",
+      color: "#6b7280",
+      fontWeight: "800"
   },
 
-  statusValue: {
-    fontSize: "34px",
-    fontWeight: "900",
-    marginTop: "4px"
+      statusValue: {
+        fontSize: "34px",
+      fontWeight: "900",
+      marginTop: "4px"
   },
 
-  toolbar: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "10px",
-    background: "#fff",
-    borderRadius: "22px",
-    padding: "14px",
-    marginBottom: "16px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
+      toolbar: {
+        display: "flex",
+      flexWrap: "wrap",
+      gap: "10px",
+      background: "#fff",
+      borderRadius: "22px",
+      padding: "14px",
+      marginBottom: "16px",
+      boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
   },
 
-toolbarArea: {
-  display: "grid",
-  gridTemplateColumns: "1fr auto",
-  gap: "14px",
-  marginBottom: "16px"
+      toolbarArea: {
+        display: "grid",
+      gridTemplateColumns: "1fr auto",
+      gap: "14px",
+      marginBottom: "16px"
 },
 
-toolbarGroup: {
-  display: "flex",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: "10px",
-  background: "#fff",
-  borderRadius: "22px",
-  padding: "14px",
-  boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
+      toolbarGroup: {
+        display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "10px",
+      background: "#fff",
+      borderRadius: "22px",
+      padding: "14px",
+      boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
 },
 
-dangerGroup: {
-  display: "flex",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: "10px",
-  background: "#fff5f5",
-  borderRadius: "22px",
-  padding: "14px",
-  border: "2px solid #fecaca",
-  boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
+      dangerGroup: {
+        display: "flex",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: "10px",
+      background: "#fff5f5",
+      borderRadius: "22px",
+      padding: "14px",
+      border: "2px solid #fecaca",
+      boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
 },
 
-toolbarTitle: {
-  fontSize: "16px",
-  fontWeight: "900",
-  color: "#6b7280",
-  marginRight: "4px"
+      toolbarTitle: {
+        fontSize: "16px",
+      fontWeight: "900",
+      color: "#6b7280",
+      marginRight: "4px"
 },
 
-  primaryButton: {
-    fontSize: "18px",
-    fontWeight: "900",
-    padding: "12px 20px",
-    borderRadius: "14px",
-    border: "none",
-    background: "#2563eb",
-    color: "#fff",
-    cursor: "pointer"
+      primaryButton: {
+        fontSize: "18px",
+      fontWeight: "900",
+      padding: "12px 20px",
+      borderRadius: "14px",
+      border: "none",
+      background: "#2563eb",
+      color: "#fff",
+      cursor: "pointer"
   },
 
-  toolButton: {
-    fontSize: "18px",
-    fontWeight: "900",
-    padding: "12px 20px",
-    borderRadius: "14px",
-    border: "none",
-    background: "#f3f4f6",
-    color: "#111827",
-    cursor: "pointer"
+      toolButton: {
+        fontSize: "18px",
+      fontWeight: "900",
+      padding: "12px 20px",
+      borderRadius: "14px",
+      border: "none",
+      background: "#f3f4f6",
+      color: "#111827",
+      cursor: "pointer"
   },
 
-  successButton: {
-    fontSize: "18px",
-    fontWeight: "900",
-    padding: "12px 20px",
-    borderRadius: "14px",
-    border: "none",
-    background: "#16a34a",
-    color: "#fff",
-    cursor: "pointer"
+      successButton: {
+        fontSize: "18px",
+      fontWeight: "900",
+      padding: "12px 20px",
+      borderRadius: "14px",
+      border: "none",
+      background: "#16a34a",
+      color: "#fff",
+      cursor: "pointer"
   },
 
-  dangerButton: {
-    fontSize: "18px",
-    fontWeight: "900",
-    padding: "12px 20px",
-    borderRadius: "14px",
-    border: "none",
-    background: "#fee2e2",
-    color: "#991b1b",
-    cursor: "pointer"
+      dangerButton: {
+        fontSize: "18px",
+      fontWeight: "900",
+      padding: "12px 20px",
+      borderRadius: "14px",
+      border: "none",
+      background: "#fee2e2",
+      color: "#991b1b",
+      cursor: "pointer"
   },
 
-  calendarCard: {
-    background: "#fff",
-    borderRadius: "26px",
-    padding: "18px",
-    boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
-    overflow: "hidden"
+      calendarCard: {
+        background: "#fff",
+      borderRadius: "26px",
+      padding: "18px",
+      boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
+      overflow: "hidden"
   },
 
-  sidePanel: {
-    position: "fixed",
-    right: 0,
-    top: 0,
-    width: "360px",
-    height: "100%",
-    background: "#fff",
-    padding: "18px",
-    borderLeft: "1px solid #e5e7eb",
-    boxShadow: "-10px 0 25px rgba(0,0,0,0.12)",
-    zIndex: 9999,
-    overflowY: "auto"
+      sidePanel: {
+        position: "fixed",
+      right: 0,
+      top: 0,
+      width: "360px",
+      height: "100%",
+      background: "#fff",
+      padding: "18px",
+      borderLeft: "1px solid #e5e7eb",
+      boxShadow: "-10px 0 25px rgba(0,0,0,0.12)",
+      zIndex: 9999,
+      overflowY: "auto"
   },
 
-  sideHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "16px"
+      sideHeader: {
+        display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: "16px"
   },
 
-  sideTitle: {
-    fontSize: "30px",
-    fontWeight: "900"
+      sideTitle: {
+        fontSize: "30px",
+      fontWeight: "900"
   },
 
-  sideSubTitle: {
-    fontSize: "16px",
-    color: "#6b7280",
-    marginTop: "4px"
+      sideSubTitle: {
+        fontSize: "16px",
+      color: "#6b7280",
+      marginTop: "4px"
   },
 
-  closeButton: {
-    width: "42px",
-    height: "42px",
-    borderRadius: "999px",
-    border: "none",
-    background: "#111827",
-    color: "#fff",
-    fontSize: "26px",
-    fontWeight: "900",
-    cursor: "pointer"
+      closeButton: {
+        width: "42px",
+      height: "42px",
+      borderRadius: "999px",
+      border: "none",
+      background: "#111827",
+      color: "#fff",
+      fontSize: "26px",
+      fontWeight: "900",
+      cursor: "pointer"
   },
 
-  sideItem: {
-    marginBottom: "12px",
-    padding: "14px",
-    borderRadius: "18px",
-    border: "1px solid #e5e7eb"
+      sideItem: {
+        marginBottom: "12px",
+      padding: "14px",
+      borderRadius: "18px",
+      border: "1px solid #e5e7eb"
   },
 
-  sideItemTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "8px",
-    alignItems: "flex-start",
-    marginBottom: "8px"
+      sideItemTop: {
+        display: "flex",
+      justifyContent: "space-between",
+      gap: "8px",
+      alignItems: "flex-start",
+      marginBottom: "8px"
   },
 
-  sideItemHeader: {
-    fontSize: "18px",
-    fontWeight: "900"
+      sideItemHeader: {
+        fontSize: "18px",
+      fontWeight: "900"
   },
 
-  sideBadge: {
-    fontSize: "13px",
-    fontWeight: "900",
-    padding: "5px 9px",
-    borderRadius: "999px",
-    background: "#111827",
-    color: "#fff",
-    whiteSpace: "nowrap"
+      sideBadge: {
+        fontSize: "13px",
+      fontWeight: "900",
+      padding: "5px 9px",
+      borderRadius: "999px",
+      background: "#111827",
+      color: "#fff",
+      whiteSpace: "nowrap"
   },
 
-  sideInfo: {
-    fontSize: "15px",
-    color: "#374151",
-    marginBottom: "4px",
-    fontWeight: "700"
+      sideInfo: {
+        fontSize: "15px",
+      color: "#374151",
+      marginBottom: "4px",
+      fontWeight: "700"
   },
 
-  orderButtons: {
-    display: "flex",
-    gap: "8px",
-    marginTop: "10px"
+      orderButtons: {
+        display: "flex",
+      gap: "8px",
+      marginTop: "10px"
   },
 
-  smallButton: {
-    flex: 1,
-    padding: "10px",
-    borderRadius: "12px",
-    border: "none",
-    background: "#111827",
-    color: "#fff",
-    fontWeight: "900",
-    cursor: "pointer"
+      smallButton: {
+        flex: 1,
+      padding: "10px",
+      borderRadius: "12px",
+      border: "none",
+      background: "#111827",
+      color: "#fff",
+      fontWeight: "900",
+      cursor: "pointer"
   }
 }

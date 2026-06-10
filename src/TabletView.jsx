@@ -6,40 +6,51 @@ import interactionPlugin from "@fullcalendar/interaction"
 import jaLocale from "@fullcalendar/core/locales/ja"
 
 export default function TabletView() {
-  const [tabletMode, setTabletMode] = useState("gantt")
-  const [selectedMachine, setSelectedMachine] = useState("")
-  const [inputDailyNo, setInputDailyNo] = useState("")
-  const [showTodayOnly, setShowTodayOnly] = useState(false)
+  const [tabletMode, setTabletMode] = useState("work")
 
+  const groupOrder = [
+    "MC",
+    "ラジアル",
+    "研磨",
+    "放電",
+    "ワイヤ",
+    "HW",
+    "CAM",
+    "検査",
+    "出荷前確認",
+    "その他"
+  ]
+
+  const resourceMaster = {
+    MC: ["MC09", "MC11", "MC12", "MC13", "110"],
+    ラジアル: ["ラジアル"],
+    研磨: ["研磨"],
+    放電: ["放電新", "放電旧"],
+    ワイヤ: ["ワイヤ"],
+    HW: ["LAS溶接", "TIG溶接", "溶接(アーク・ﾛｳ付け)", "開先", "バラシ・組付", "ミガキ"],
+    CAM: ["3Dデータ作成・設計", "PRG作成"],
+    検査: ["ATOS", "三次元"],
+    出荷前確認: ["出荷前確認"],
+    その他: ["打ち合わせ"]
+  }
+
+  const resources = groupOrder.flatMap((group, groupIndex) =>
+    (resourceMaster[group] || []).map((id, index) => ({
+      id,
+      title: `${group} - ${id}`,
+      sortOrder: groupIndex * 100 + index
+    }))
+  )
+
+  const [selectedGroup, setSelectedGroup] = useState(null)
+  const [selectedMachine, setSelectedMachine] = useState(null)
+
+  const setScreenMode = useStore(s => s.setScreenMode)
   const events = useStore(s => s.events)
   const setEvents = useStore(s => s.setEvents)
-  const setScreenMode = useStore(s => s.setScreenMode)
 
-  const today = new Date().toLocaleDateString("sv-SE")
-
-  const resources = [
-    "MC09", "MC11", "MC12", "MC13", "110",
-    "ラジアル", "研磨", "放電新", "放電旧", "ワイヤ",
-    "LAS溶接", "TIG溶接", "溶接(アーク・ﾛｳ付け)",
-    "開先", "バラシ・組付", "ミガキ",
-    "3Dデータ作成・設計", "PRG作成",
-    "ATOS", "三次元", "出荷前確認", "打ち合わせ"
-  ].map((id, index) => ({
-    id,
-    title: id,
-    sortOrder: index
-  }))
-
-  const filtered = events.filter(e => {
-    const eventDate = new Date(e.start).toLocaleDateString("sv-SE")
-    const todayFilter = !showTodayOnly || eventDate === today
-    const machineFilter = !selectedMachine || e.resourceId === selectedMachine
-    const dailyNoFilter =
-      inputDailyNo === "" ||
-      String(e.dailyNo || "").includes(inputDailyNo)
-
-    return todayFilter && machineFilter && dailyNoFilter
-  })
+  const [inputDailyNo, setInputDailyNo] = useState("")
+  const [moveDailyNo, setMoveDailyNo] = useState("")
 
   const handleWork = (id) => {
     const now = new Date().toISOString()
@@ -54,15 +65,19 @@ export default function TabletView() {
         if (!last || last.end) {
           return {
             ...e,
+            actualMachine: e.actualMachine || selectedMachine,
             workLogs: [...logs, { start: now, end: null }]
           }
         }
 
+        const updatedLogs = logs.map((l, i) => {
+          if (i !== logs.length - 1) return l
+          return { ...l, end: now }
+        })
+
         return {
           ...e,
-          workLogs: logs.map((l, i) =>
-            i === logs.length - 1 ? { ...l, end: now } : l
-          )
+          workLogs: updatedLogs
         }
       })
     )
@@ -84,48 +99,90 @@ export default function TabletView() {
     )
   }
 
+  const filtered = events.filter(e => {
+    const normalSearch =
+      inputDailyNo === "" ||
+      String(e.dailyNo || "").includes(inputDailyNo)
+
+    const moveSearch =
+      moveDailyNo === "" ||
+      String(e.dailyNo || "").includes(moveDailyNo)
+
+    if (moveDailyNo !== "") {
+      const sameGroupMachines = resourceMaster[selectedGroup] || []
+
+      return (
+        moveSearch &&
+        sameGroupMachines.includes(e.resourceId)
+      )
+    }
+
+    return (
+      selectedMachine &&
+      e.resourceId === selectedMachine &&
+      normalSearch
+    )
+  })
+
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <div>
-          <div style={styles.title}>現場タブレット</div>
-          <div style={styles.subTitle}>
-            全体予定確認・実績入力
-          </div>
+    <div style={{ padding: "20px", paddingBottom: "120px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button
+            onClick={() => setTabletMode("gantt")}
+            style={{
+              fontSize: "24px",
+              padding: "14px 24px",
+              borderRadius: "12px",
+              border: "none",
+              background: tabletMode === "gantt" ? "#2563eb" : "#e5e7eb",
+              color: tabletMode === "gantt" ? "#fff" : "#111827",
+              fontWeight: "bold"
+            }}
+          >
+            全体予定
+          </button>
+
+          <button
+            onClick={() => setTabletMode("work")}
+            style={{
+              fontSize: "24px",
+              padding: "14px 24px",
+              borderRadius: "12px",
+              border: "none",
+              background: tabletMode === "work" ? "#16a34a" : "#e5e7eb",
+              color: tabletMode === "work" ? "#fff" : "#111827",
+              fontWeight: "bold"
+            }}
+          >
+            実績入力
+          </button>
         </div>
 
         <button
           onClick={() => setScreenMode("login")}
-          style={styles.logoutButton}
+          style={{
+            fontSize: "20px",
+            padding: "12px 20px",
+            borderRadius: "12px",
+            border: "none",
+            background: "#111827",
+            color: "#fff",
+            fontWeight: "bold"
+          }}
         >
           ログアウト
         </button>
       </div>
 
-      <div style={styles.modeTabs}>
-        <button
-          onClick={() => setTabletMode("gantt")}
-          style={{
-            ...styles.modeButton,
-            ...(tabletMode === "gantt" ? styles.activeMode : {})
-          }}
-        >
-          全体予定
-        </button>
-
-        <button
-          onClick={() => setTabletMode("work")}
-          style={{
-            ...styles.modeButton,
-            ...(tabletMode === "work" ? styles.activeMode : {})
-          }}
-        >
-          実績入力
-        </button>
-      </div>
-
       {tabletMode === "gantt" && (
-        <div style={styles.calendarCard}>
+        <div style={{
+          background: "#fff",
+          borderRadius: "18px",
+          padding: "14px",
+          boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+          overflowX: "auto"
+        }}>
           <FullCalendar
             resourceAreaHeaderContent="設備"
             resourceOrder="sortOrder"
@@ -162,83 +219,165 @@ export default function TabletView() {
 
       {tabletMode === "work" && (
         <>
-          <div style={styles.filterCard}>
-            <select
-              value={selectedMachine}
-              onChange={(e) => setSelectedMachine(e.target.value)}
-              style={styles.input}
-            >
-              <option value="">全設備</option>
-              {resources.map(r => (
-                <option key={r.id} value={r.id}>
-                  {r.title}
-                </option>
-              ))}
-            </select>
-
-            <input
-              value={inputDailyNo}
-              onChange={(e) => setInputDailyNo(e.target.value)}
-              placeholder="日報番号検索"
-              style={styles.input}
-            />
-
-            <button
-              onClick={() => setShowTodayOnly(prev => !prev)}
-              style={{
-                ...styles.todayButton,
-                background: showTodayOnly ? "#16a34a" : "#6b7280"
-              }}
-            >
-              {showTodayOnly ? "今日のみ ON" : "今日のみ OFF"}
-            </button>
+          <div>
+            {Object.keys(resourceMaster).map(group => (
+              <button
+                key={group}
+                onClick={() => {
+                  setSelectedGroup(group)
+                  setSelectedMachine(null)
+                }}
+                style={{
+                  fontSize: "24px",
+                  padding: "12px 20px",
+                  margin: "6px",
+                  minHeight: "60px",
+                  borderRadius: "12px",
+                  border: "none",
+                  background: selectedGroup === group ? "#2563eb" : "#e5e7eb",
+                  color: selectedGroup === group ? "#fff" : "#111827",
+                  fontWeight: "bold"
+                }}
+              >
+                {group}
+              </button>
+            ))}
           </div>
 
-          <div style={styles.countBar}>
-            表示件数：{filtered.length} 件
+          {selectedGroup && (
+            <div>
+              {resourceMaster[selectedGroup].map(machine => (
+                <button
+                  key={machine}
+                  onClick={() => setSelectedMachine(machine)}
+                  style={{
+                    fontSize: "28px",
+                    padding: "16px 24px",
+                    margin: "6px",
+                    minWidth: "120px",
+                    minHeight: "70px",
+                    borderRadius: "12px",
+                    border: "none",
+                    background: selectedMachine === machine ? "#16a34a" : "#e5e7eb",
+                    color: selectedMachine === machine ? "#fff" : "#111827",
+                    fontWeight: "bold"
+                  }}
+                >
+                  {machine}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <h2 style={{ fontSize: "32px", marginBottom: "12px" }}>
+            設備 {selectedMachine || "-"}
+          </h2>
+
+          <div style={{
+            display: "flex",
+            gap: "16px",
+            marginBottom: "16px"
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "22px", fontWeight: "bold" }}>
+                日報番号検索
+              </div>
+              <input
+                type="text"
+                value={inputDailyNo}
+                onChange={(e) => setInputDailyNo(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: "58px",
+                  fontSize: "26px",
+                  padding: "8px"
+                }}
+              />
+            </div>
+
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "22px", fontWeight: "bold" }}>
+                振替検索
+              </div>
+              <input
+                type="text"
+                value={moveDailyNo}
+                onChange={(e) => setMoveDailyNo(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: "58px",
+                  fontSize: "26px",
+                  padding: "8px"
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "12px" }}>
+            該当件数：{filtered.length}件
           </div>
 
           {filtered.map(e => {
             const last = e.workLogs?.[e.workLogs.length - 1]
             const isWorking = last && !last.end && !e.isCompleted
 
+            const totalWork = (e.workLogs || []).reduce((sum, l) => {
+              if (!l.end) return sum
+
+              const start = new Date(l.start)
+              const end = new Date(l.end)
+
+              return sum + (end - start) / (1000 * 60 * 60)
+            }, 0)
+
             return (
               <div
                 key={e.id}
                 style={{
-                  ...styles.workCard,
-                  ...(e.isCompleted ? styles.completedCard : {}),
-                  ...(isWorking ? styles.workingCard : {})
+                  marginBottom: "16px",
+                  padding: "18px",
+                  fontSize: "24px",
+                  borderRadius: "12px",
+                  background: e.isCompleted
+                    ? "#ccc"
+                    : (isWorking ? "#ffe082" : "#eee")
                 }}
               >
-                <div style={styles.cardTop}>
-                  <div>
-                    <div style={styles.dailyNo}>{e.dailyNo}</div>
-                    <div style={styles.process}>{e.process}</div>
-                    <div style={styles.info}>
-                      設備：{e.resourceId}
-                    </div>
-                    <div style={styles.info}>
-                      開始：{e.start?.substring(0, 10)}
-                    </div>
-                    <div style={styles.info}>
-                      予定工数：{e.work}h
-                    </div>
-                  </div>
+                <div style={{
+                  fontSize: "32px",
+                  fontWeight: "bold",
+                  color: "#1f2937"
+                }}>
+                  {e.dailyNo}
+                </div>
 
-                  <div style={styles.badge}>
-                    {e.isCompleted
-                      ? "完了"
-                      : isWorking
-                        ? "作業中"
-                        : "未開始"}
-                  </div>
+                <div style={{
+                  fontSize: "24px",
+                  marginBottom: "12px",
+                  color: "#374151"
+                }}>
+                  {e.process}
+                </div>
+
+                <div>自動：{totalWork.toFixed(1)}</div>
+
+                <div>
+                  実投入：
+                  {e.manualWork !== undefined ? e.manualWork.toFixed(1) : "-"}
+                </div>
+
+                <div>
+                  差異：
+                  {e.manualWork !== undefined
+                    ? (e.manualWork - totalWork).toFixed(1)
+                    : "-"
+                  }
                 </div>
 
                 <input
                   type="number"
                   step="0.1"
-                  placeholder="実績工数"
+                  placeholder="手入力工数"
                   value={e.manualWork ?? ""}
                   onChange={(event) => {
                     const value = parseFloat(event.target.value || 0)
@@ -251,36 +390,42 @@ export default function TabletView() {
                       )
                     )
                   }}
-                  style={styles.manualInput}
                 />
 
-                <div style={styles.actionRow}>
+                <button
+                  onClick={() => handleWork(e.id)}
+                  style={{
+                    fontSize: "26px",
+                    padding: "16px 32px",
+                    margin: "8px"
+                  }}
+                >
+                  {isWorking ? "終了" : "開始"}
+                </button>
+
+                <button
+                  onClick={() => completeWork(e.id)}
+                  style={{
+                    fontSize: "22px",
+                    padding: "14px 24px",
+                    margin: "6px"
+                  }}
+                >
+                  工程完了
+                </button>
+
+                {e.isCompleted && (
                   <button
-                    onClick={() => handleWork(e.id)}
+                    onClick={() => undoComplete(e.id)}
                     style={{
-                      ...styles.startButton,
-                      background: isWorking ? "#ef4444" : "#2563eb"
+                      fontSize: "22px",
+                      padding: "14px 24px",
+                      margin: "6px"
                     }}
                   >
-                    {isWorking ? "終了" : "開始"}
+                    完了解除
                   </button>
-
-                  <button
-                    onClick={() => completeWork(e.id)}
-                    style={styles.completeButton}
-                  >
-                    工程完了
-                  </button>
-
-                  {e.isCompleted && (
-                    <button
-                      onClick={() => undoComplete(e.id)}
-                      style={styles.undoButton}
-                    >
-                      完了解除
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             )
           })}
@@ -288,190 +433,4 @@ export default function TabletView() {
       )}
     </div>
   )
-}
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    padding: "20px",
-    background: "#f3f4f6",
-    fontFamily: "system-ui, sans-serif",
-    color: "#111827"
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "18px"
-  },
-  title: {
-    fontSize: "34px",
-    fontWeight: "900"
-  },
-  subTitle: {
-    fontSize: "18px",
-    color: "#6b7280"
-  },
-  logoutButton: {
-    padding: "12px 20px",
-    borderRadius: "14px",
-    border: "none",
-    background: "#111827",
-    color: "#fff",
-    fontSize: "18px",
-    fontWeight: "900"
-  },
-  modeTabs: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-    marginBottom: "18px"
-  },
-  modeButton: {
-    padding: "18px",
-    borderRadius: "18px",
-    border: "2px solid #d1d5db",
-    background: "#fff",
-    fontSize: "24px",
-    fontWeight: "900"
-  },
-  activeMode: {
-    background: "#2563eb",
-    color: "#fff",
-    borderColor: "#2563eb"
-  },
-  calendarCard: {
-    background: "#fff",
-    padding: "14px",
-    borderRadius: "22px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-    overflowX: "auto"
-  },
-  filterCard: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr auto",
-    gap: "12px",
-    background: "#fff",
-    padding: "16px",
-    borderRadius: "20px",
-    marginBottom: "16px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)"
-  },
-  input: {
-    height: "56px",
-    fontSize: "22px",
-    padding: "8px 12px",
-    borderRadius: "14px",
-    border: "2px solid #d1d5db"
-  },
-  todayButton: {
-    height: "56px",
-    padding: "0 20px",
-    borderRadius: "14px",
-    border: "none",
-    color: "#fff",
-    fontSize: "20px",
-    fontWeight: "900"
-  },
-  countBar: {
-    background: "#111827",
-    color: "#fff",
-    padding: "16px",
-    borderRadius: "16px",
-    fontSize: "22px",
-    fontWeight: "900",
-    marginBottom: "16px"
-  },
-  workCard: {
-    background: "#fff",
-    borderRadius: "22px",
-    padding: "20px",
-    marginBottom: "16px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
-    borderLeft: "10px solid #9ca3af"
-  },
-  workingCard: {
-    borderLeftColor: "#f59e0b",
-    background: "#fffbeb"
-  },
-  completedCard: {
-    borderLeftColor: "#16a34a",
-    background: "#ecfdf5"
-  },
-  cardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "12px",
-    marginBottom: "14px"
-  },
-  dailyNo: {
-    fontSize: "30px",
-    fontWeight: "900"
-  },
-  process: {
-    fontSize: "22px",
-    fontWeight: "800",
-    color: "#374151"
-  },
-  info: {
-    fontSize: "17px",
-    marginTop: "4px",
-    color: "#4b5563",
-    fontWeight: "700"
-  },
-  badge: {
-    height: "fit-content",
-    padding: "8px 14px",
-    borderRadius: "999px",
-    background: "#111827",
-    color: "#fff",
-    fontSize: "18px",
-    fontWeight: "900"
-  },
-  manualInput: {
-    width: "100%",
-    height: "56px",
-    fontSize: "24px",
-    padding: "8px 12px",
-    borderRadius: "14px",
-    border: "2px solid #d1d5db",
-    marginBottom: "14px"
-  },
-  actionRow: {
-    display: "flex",
-    gap: "10px",
-    flexWrap: "wrap"
-  },
-  startButton: {
-    flex: 1,
-    minWidth: "130px",
-    padding: "16px",
-    borderRadius: "16px",
-    border: "none",
-    color: "#fff",
-    fontSize: "24px",
-    fontWeight: "900"
-  },
-  completeButton: {
-    flex: 1,
-    minWidth: "130px",
-    padding: "16px",
-    borderRadius: "16px",
-    border: "none",
-    background: "#16a34a",
-    color: "#fff",
-    fontSize: "22px",
-    fontWeight: "900"
-  },
-  undoButton: {
-    flex: 1,
-    minWidth: "130px",
-    padding: "16px",
-    borderRadius: "16px",
-    border: "none",
-    background: "#6b7280",
-    color: "#fff",
-    fontSize: "22px",
-    fontWeight: "900"
-  }
 }

@@ -8,7 +8,7 @@ export const useStore = create(
 
       events: [],
 
-      screenMode: 'input',
+      screenMode: 'login',
 
       setEvents: (updater) =>
         set((state) => ({
@@ -22,7 +22,7 @@ export const useStore = create(
 
     }),
     {
-      name: 'gantt-storage'
+      name: 'gantt-storage-v2'
     }
   )
 )

@@ -1,4 +1,4 @@
-import OrderForm from './components/OrderForm'
+/* import OrderForm from './components/OrderForm'
 import GanttView from './components/GanttView'
 import OrderList from './components/OrderList'
 import { useStore } from './store/useStore'
@@ -18,4 +18,9 @@ export default function App() {
       {screenMode === 'tablet' && <TabletView />}
     </div>
   )
+}
+ */
+
+export default function App() {
+  return <h1>ログインテスト成功</h1>
 }

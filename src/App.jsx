@@ -3,6 +3,7 @@ import GanttView from './components/GanttView'
 import OrderList from './components/OrderList'
 import { useStore } from './store/useStore'
 import TabletView from './TabletView'
+import LoginView from './components/LoginView'
 
 export default function App() {
 
@@ -10,6 +11,7 @@ export default function App() {
 
   return (
     <div>
+      {screenMode === 'login' && <LoginView />}
       {screenMode === 'input' && <OrderForm />}
       {screenMode === 'gantt' && <GanttView />}
       {screenMode === 'orderlist' && <OrderList />}

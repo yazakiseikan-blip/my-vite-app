@@ -594,11 +594,19 @@ const handleEventDidMount = (info) => {
           </div>
         </div>
 
-        <button
-          onClick={() => setScreenMode("tablet")}
-          style={styles.tabletButton}
-        >
+        <div style={{ display: "flex", gap: "10px" }}>
+         <button
+             onClick={() => setScreenMode("tablet")}
+             style={styles.tabletButton}
+          >
           タブレット
+         </button>
+
+        <button
+             onClick={() => setScreenMode("login")}
+             style={styles.tabletButton}
+        >
+          ログアウト
         </button>
       </div>
 

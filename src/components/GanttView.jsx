@@ -237,6 +237,21 @@ export default function GanttView() {
     setHistory(prev => prev.slice(0, -1))
   }
 
+const deleteEvent = (id) => {
+  setEvents(prev => {
+    const target = prev.find(e => e.id === id)
+    if (!target) return prev
+
+    setHistory(h => [...h, {
+      type: "delete",
+      before: structuredClone(target)
+    }])
+
+    setRedoStack([])
+    return prev.filter(e => e.id !== id)
+  })
+}
+
   const redoLast = () => {
     const last = redoStack[redoStack.length - 1]
     if (!last) return
@@ -296,27 +311,41 @@ export default function GanttView() {
     })
   }
 
-  const moveDown = (id) => {
-    setEvents(prev => {
-      const target = prev.find(e => e.id === id)
-      if (!target) return prev
+const moveDown = (id) => {
+  setEvents(prev => {
+    const target = prev.find(e => e.id === id)
+    if (!target) return prev
 
-      const same = prev
-        .filter(e => e.dailyNo === target.dailyNo)
-        .sort((a, b) => a.order - b.order)
+    const same = prev
+      .filter(e => e.dailyNo === target.dailyNo)
+      .sort((a, b) => a.order - b.order)
 
-      const index = same.findIndex(e => e.id === id)
-      if (index === -1 || index >= same.length - 1) return prev
+    const index = same.findIndex(e => e.id === id)
+    if (index === -1 || index >= same.length - 1) return prev
 
-      const lower = same[index + 1]
+    const lower = same[index + 1]
 
-      return prev.map(e => {
-        if (e.id === target.id) return { ...e, order: lower.order }
-        if (e.id === lower.id) return { ...e, order: target.order }
-        return e
-      })
+    return prev.map(e => {
+      if (e.id === target.id) {
+        return {
+          ...e,
+          order: lower.order,
+          start: lower.start
+        }
+      }
+
+      if (e.id === lower.id) {
+        return {
+          ...e,
+          order: target.order,
+          start: target.start
+        }
+      }
+
+      return e
     })
-  }
+  })
+}
 
   const exportHistory = () => {
     const header = [
@@ -611,6 +640,7 @@ return (
       </div>
     </div>
 
+    
     <div style={styles.statusRow}>
           <div style={styles.statusCard}>
             <div style={styles.statusLabel}>日報番号件数</div>
@@ -919,8 +949,12 @@ return (
               .sort((a, b) => a.order - b.order)
               .map(r => {
                 const today = new Date().toISOString()
-                const isNow = r.start <= today && r.end >= today
-                const isPast = r.end < today
+                const now = new Date()
+                const start = new Date(r.start)
+                const end = new Date(r.end)
+
+                const isNow = start <= now && end >= now
+                const isPast = new Date(r.end) < new Date()
 
                 let bg = "#f3f4f6"
                 let label = "予定"

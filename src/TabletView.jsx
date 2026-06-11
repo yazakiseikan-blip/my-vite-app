@@ -37,6 +37,14 @@ export default function TabletView() {
     出荷前確認: ["出荷前確認"],
     その他: ["打ち合わせ"]
   }
+  const workerMaster = {
+    MC: ["片野", "野田"],
+    ラジアル: ["志賢"],
+    研磨: ["志賢"],
+    放電: ["胡"],
+    ワイヤ: ["松本"]
+  }
+
 
   const resources = groupOrder.flatMap((group, groupIndex) =>
     (resourceMaster[group] || []).map((id, index) => ({
@@ -48,6 +56,7 @@ export default function TabletView() {
 
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [selectedMachine, setSelectedMachine] = useState(null)
+  const [selectedWorker, setSelectedWorker] = useState("")
 
   const setScreenMode = useStore(s => s.setScreenMode)
   const events = useStore(s => s.events)
@@ -56,6 +65,7 @@ export default function TabletView() {
   const [inputDailyNo, setInputDailyNo] = useState("")
   const [moveDailyNo, setMoveDailyNo] = useState("")
   const [showTodayOnly, setShowTodayOnly] = useState(true)
+
 
   const handleWork = (id) => {
     const now = new Date().toISOString()
@@ -71,7 +81,11 @@ export default function TabletView() {
           return {
             ...e,
             actualMachine: e.actualMachine || selectedMachine,
-            workLogs: [...logs, { start: now, end: null }]
+            workLogs: [...logs, {
+              start: now,
+              end: null,
+              worker: selectedWorker
+            }]
           }
         }
 
@@ -140,80 +154,64 @@ export default function TabletView() {
   })
 
   return (
-    <div style={{ padding: "20px", paddingBottom: "120px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
-        <div style={{ display: "flex", gap: "12px" }}>
+    <>
+      <div style={{ marginBottom: "22px" }}>
+        <button
+          onClick={() => {
+            setTabletMode("work")
+            localStorage.setItem("tabletMode", "work")
+          }}
+          style={{
+            width: "100%",
+            fontSize: "28px",
+            padding: "18px",
+            borderRadius: "18px",
+            border: "none",
+            background: tabletMode === "work" ? "#16a34a" : "#e5e7eb",
+            color: tabletMode === "work" ? "#fff" : "#111827",
+            fontWeight: "900",
+            marginBottom: "10px"
+          }}
+        >
+          実績入力
+        </button>
 
+        <div style={{ display: "flex", gap: "10px" }}>
           <button
             onClick={() => {
               setTabletMode("gantt")
               localStorage.setItem("tabletMode", "gantt")
             }}
             style={{
-              fontSize: "24px",
-              padding: "14px 24px",
-              borderRadius: "12px",
+              flex: 1,
+              fontSize: "20px",
+              padding: "14px",
+              borderRadius: "14px",
               border: "none",
               background: tabletMode === "gantt" ? "#2563eb" : "#e5e7eb",
               color: tabletMode === "gantt" ? "#fff" : "#111827",
-              fontWeight: "bold"
+              fontWeight: "900"
             }}
           >
             全体予定
           </button>
 
           <button
-            onClick={() => {
-              setTabletMode("work")
-              localStorage.setItem("tabletMode", "work")
-            }}
-
-            eventClick={(info) => {
-              const clicked = events.find(e => e.id === info.event.id)
-
-              if (!clicked) return
-
-              setSelectedGroup(
-                Object.keys(resourceMaster).find(group =>
-                  resourceMaster[group].includes(clicked.resourceId)
-                ) || null
-              )
-
-              setSelectedMachine(clicked.resourceId)
-              setInputDailyNo(String(clicked.dailyNo || ""))
-
-              setTabletMode("work")
-              localStorage.setItem("tabletMode", "work")
-            }}
-
+            onClick={() => setScreenMode("login")}
             style={{
-              fontSize: "24px",
-              padding: "14px 24px",
-              borderRadius: "12px",
+              flex: 1,
+              fontSize: "20px",
+              padding: "14px",
+              borderRadius: "14px",
               border: "none",
-              background: tabletMode === "work" ? "#16a34a" : "#e5e7eb",
-              color: tabletMode === "work" ? "#fff" : "#111827",
-              fontWeight: "bold"
+              background: "#111827",
+              color: "#fff",
+              fontWeight: "900"
             }}
           >
-            実績入力
+            ログアウト
           </button>
         </div>
-
-        <button
-          onClick={() => setScreenMode("login")}
-          style={{
-            fontSize: "20px",
-            padding: "12px 20px",
-            borderRadius: "12px",
-            border: "none",
-            background: "#111827",
-            color: "#fff",
-            fontWeight: "bold"
-          }}
-        >
-          ログアウト
-        </button>
       </div>
 
       {tabletMode === "gantt" && (
@@ -256,329 +254,397 @@ export default function TabletView() {
             displayEventTime={false}
 
             eventClick={(info) => {
-              const clicked = events.find(e => e.id === info.event.id)
-
+              const clicked = events.find(e => String(e.id) === String(info.event.id))
               if (!clicked) return
+
+              const machine = clicked.resourceId || info.event.getResources?.()[0]?.id
 
               setSelectedGroup(
                 Object.keys(resourceMaster).find(group =>
-                  resourceMaster[group].includes(clicked.resourceId)
+                  resourceMaster[group].includes(machine)
                 ) || null
               )
 
-              setSelectedMachine(clicked.resourceId)
+              setSelectedMachine(machine)
               setInputDailyNo(String(clicked.dailyNo || ""))
+              setMoveDailyNo("")
+              setShowTodayOnly(false)
 
               setTabletMode("work")
               localStorage.setItem("tabletMode", "work")
             }}
           />
         </div>
-      )}
 
-      {tabletMode === "work" && (
-        <>
-          <div>
-            {Object.keys(resourceMaster).map(group => (
-              <button
-                key={group}
-                onClick={() => {
-                  setSelectedGroup(group)
-                  setSelectedMachine(null)
-                }}
-                style={{
-                  fontSize: "24px",
-                  padding: "12px 20px",
-                  margin: "6px",
-                  minHeight: "60px",
-                  borderRadius: "12px",
-                  border: "none",
-                  background: selectedGroup === group ? "#2563eb" : "#e5e7eb",
-                  color: selectedGroup === group ? "#fff" : "#111827",
-                  fontWeight: "bold"
-                }}
-              >
-                {group}
-              </button>
-            ))}
-          </div>
+      )
+      }
 
-          {selectedGroup && (
+      {
+        tabletMode === "work" && (
+          <>
             <div>
-              {resourceMaster[selectedGroup].map(machine => (
+              {Object.keys(resourceMaster).map(group => (
                 <button
-                  key={machine}
-                  onClick={() => setSelectedMachine(machine)}
+                  key={group}
+                  onClick={() => {
+                    setSelectedGroup(group)
+                    setSelectedMachine(null)
+                  }}
                   style={{
-                    fontSize: "28px",
-                    padding: "16px 24px",
+                    fontSize: isMobile ? "20px" : "24px",
+                    padding: isMobile ? "10px 14px" : "12px 20px",
                     margin: "6px",
-                    minWidth: "120px",
-                    minHeight: "70px",
+                    minHeight: isMobile ? "52px" : "60px",
+                    whiteSpace: "nowrap",
                     borderRadius: "12px",
                     border: "none",
-                    background: selectedMachine === machine ? "#16a34a" : "#e5e7eb",
-                    color: selectedMachine === machine ? "#fff" : "#111827",
+                    background: selectedGroup === group ? "#2563eb" : "#e5e7eb",
+                    color: selectedGroup === group ? "#fff" : "#111827",
                     fontWeight: "bold"
                   }}
                 >
-                  {machine}
+                  {group}
                 </button>
               ))}
             </div>
-          )}
 
-          <h2 style={{ fontSize: "32px", marginBottom: "12px" }}>
-            設備 {selectedMachine || "-"}
-          </h2>
+            {selectedGroup && (
+              <div>
+                {resourceMaster[selectedGroup].map(machine => (
+                  <button
+                    key={machine}
+                    onClick={() => {
+                      setSelectedMachine(machine)
+                      setSelectedWorker("")
+                    }}
+                    style={{
+                      fontSize: "28px",
+                      padding: "16px 24px",
+                      margin: "6px",
+                      minWidth: "120px",
+                      minHeight: "70px",
+                      borderRadius: "12px",
+                      border: "none",
+                      background: selectedMachine === machine ? "#16a34a" : "#e5e7eb",
+                      color: selectedMachine === machine ? "#fff" : "#111827",
+                      fontWeight: "bold"
+                    }}
+                  >
+                    {machine}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          <label
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "12px",
-              fontSize: "24px",
-              fontWeight: "bold",
-              marginBottom: "12px",
-              cursor: "pointer"
-            }}
-          >
-            今日のみ
+            {selectedGroup && (
+              <div style={{ marginBottom: "16px" }}>
+                <div style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "8px" }}>
+                  作業者
+                </div>
 
-            <input
-              type="checkbox"
-              checked={showTodayOnly}
-              onChange={() => setShowTodayOnly(prev => !prev)}
-              style={{ display: "none" }}
-            />
+                {(workerMaster[selectedGroup] || []).map(worker => (
+                  <button
+                    key={worker}
+                    onClick={() => setSelectedWorker(worker)}
+                    style={{
+                      fontSize: "24px",
+                      padding: "12px 20px",
+                      margin: "6px",
+                      borderRadius: "12px",
+                      border: "none",
+                      background: selectedWorker === worker ? "#2563eb" : "#e5e7eb",
+                      color: selectedWorker === worker ? "#fff" : "#111827",
+                      fontWeight: "bold"
+                    }}
+                  >
+                    {worker}
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <span
+            <h2 style={{ fontSize: "32px", marginBottom: "12px" }}>
+              設備 {selectedMachine || "-"}
+            </h2>
+
+            <label
               style={{
-                width: "76px",
-                height: "40px",
-                borderRadius: "999px",
-                background: showTodayOnly ? "#16a34a" : "#9ca3af",
-                position: "relative",
-                display: "inline-block"
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "12px",
+                fontSize: "24px",
+                fontWeight: "bold",
+                marginBottom: "12px",
+                cursor: "pointer"
               }}
             >
+              今日のみ
+
+              <input
+                type="checkbox"
+                checked={showTodayOnly}
+                onChange={() => setShowTodayOnly(prev => !prev)}
+                style={{ display: "none" }}
+              />
+
               <span
                 style={{
-                  width: "32px",
-                  height: "32px",
+                  width: "76px",
+                  height: "40px",
                   borderRadius: "999px",
-                  background: "#fff",
-                  position: "absolute",
-                  top: "4px",
-                  left: showTodayOnly ? "40px" : "4px"
-                }}
-              />
-            </span>
-          </label>
-          <div style={{
-            display: "flex",
-            gap: "16px",
-            marginBottom: "16px"
-          }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "22px", fontWeight: "bold" }}>
-                日報番号検索
-              </div>
-              <input
-                type="text"
-                value={inputDailyNo}
-                onChange={(e) => setInputDailyNo(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: "58px",
-                  fontSize: "26px",
-                  padding: "8px"
-                }}
-              />
-            </div>
-
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: "22px", fontWeight: "bold" }}>
-                振替検索
-              </div>
-              <input
-                type="text"
-                value={moveDailyNo}
-                onChange={(e) => setMoveDailyNo(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: "58px",
-                  fontSize: "26px",
-                  padding: "8px"
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "12px" }}>
-            該当件数：{filtered.length}件
-          </div>
-
-          {filtered.map(e => {
-            const last = e.workLogs?.[e.workLogs.length - 1]
-            const isWorking = last && !last.end && !e.isCompleted
-
-            const totalWork = (e.workLogs || []).reduce((sum, l) => {
-              if (!l.end) return sum
-
-              const start = new Date(l.start)
-              const end = new Date(l.end)
-
-              return sum + (end - start) / (1000 * 60 * 60)
-            }, 0)
-
-            return (
-              <div
-                key={e.id}
-                style={{
-                  marginBottom: "18px",
-                  padding: "20px",
-                  borderRadius: "22px",
-                  background: "#fff",
-                  boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-                  border: isWorking
-                    ? "4px solid #f59e0b"
-                    : e.isCompleted
-                      ? "4px solid #9ca3af"
-                      : "4px solid #e5e7eb"
+                  background: showTodayOnly ? "#16a34a" : "#9ca3af",
+                  position: "relative",
+                  display: "inline-block"
                 }}
               >
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "12px"
-                }}>
-                  <div>
-                    <div style={{
-                      fontSize: "42px",
-                      fontWeight: "900",
-                      color: "#111827"
-                    }}>
+                <span
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "999px",
+                    background: "#fff",
+                    position: "absolute",
+                    top: "4px",
+                    left: showTodayOnly ? "40px" : "4px"
+                  }}
+                />
+              </span>
+            </label>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: isMobile ? "column" : "row",
+                gap: "16px",
+                marginBottom: "16px"
+              }}
+            >
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "22px", fontWeight: "bold" }}>
+                  日報番号検索
+                </div>
+                <input
+                  type="text"
+                  value={inputDailyNo}
+                  onChange={(e) => setInputDailyNo(e.target.value)}
+                  style={{
+                    width: "100%",
+                    height: "58px",
+                    fontSize: "26px",
+                    padding: "8px"
+                  }}
+                />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "22px", fontWeight: "bold" }}>
+                  振替検索
+                </div>
+                <input
+                  type="text"
+                  value={moveDailyNo}
+                  onChange={(e) => setMoveDailyNo(e.target.value)}
+                  style={{
+                    width: "100%",
+                    height: "58px",
+                    fontSize: "26px",
+                    padding: "8px"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "12px" }}>
+              該当件数：{filtered.length}件
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                overflowX: "auto",
+                marginBottom: "18px"
+              }}
+            >
+              {filtered.slice(0, 30).map(e => {
+                const selected = String(inputDailyNo) === String(e.dailyNo)
+
+                return (
+                  <div
+                    key={`card-${e.id}`}
+                    onClick={() => setInputDailyNo(String(e.dailyNo))}
+                    style={{
+                      minWidth: "160px",
+                      padding: "14px",
+                      borderRadius: "16px",
+                      background: selected ? "#2563eb" : "#ffffff",
+                      border: selected ? "3px solid #1d4ed8" : "2px solid #d1d5db",
+                      boxShadow: "0 4px 10px rgba(0,0,0,0.08)",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "28px",
+                        fontWeight: "900",
+                        color: selected ? "#ffffff" : "#111827"
+                      }}
+                    >
                       {e.dailyNo}
                     </div>
 
-                    <div style={{
-                      fontSize: "24px",
-                      fontWeight: "800",
-                      color: "#374151"
-                    }}>
+                    <div
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: "700",
+                        color: selected ? "#ffffff" : "#374151"
+                      }}
+                    >
                       {e.process}
                     </div>
                   </div>
+                )
+              })}
+            </div>
 
-                  <div style={{
-                    fontSize: "20px",
-                    fontWeight: "900",
-                    padding: "8px 14px",
-                    borderRadius: "999px",
-                    background: isWorking
-                      ? "#f59e0b"
-                      : e.isCompleted
-                        ? "#9ca3af"
-                        : "#16a34a",
-                    color: "#fff"
-                  }}>
-                    {isWorking ? "作業中" : e.isCompleted ? "完了" : "未開始"}
-                  </div>
-                </div>
+            {filtered
+              .filter(e => String(e.dailyNo) === String(inputDailyNo))
+              .map(e => {
+                const last = e.workLogs?.[e.workLogs.length - 1]
+                const isWorking = last && !last.end && !e.isCompleted
 
-                <div>自動：{totalWork.toFixed(1)}</div>
+                const totalWork = (e.workLogs || []).reduce((sum, l) => {
+                  if (!l.end) return sum
 
-                <div>
-                  実投入：
-                  {e.manualWork !== undefined ? e.manualWork.toFixed(1) : "-"}
-                </div>
+                  const start = new Date(l.start)
+                  const end = new Date(l.end)
 
-                <div>
-                  差異：
-                  {e.manualWork !== undefined
-                    ? (e.manualWork - totalWork).toFixed(1)
-                    : "-"
-                  }
-                </div>
+                  return sum + (end - start) / (1000 * 60 * 60)
+                }, 0)
 
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.1"
-                  placeholder="0.0"
-                  value={e.manualWork ?? ""}
-                  onChange={(event) => {
-                    const value = event.target.value
-
-                    setEvents(prev =>
-                      prev.map(ev =>
-                        ev.id === e.id
-                          ? {
-                            ...ev,
-                            manualWork: value === "" ? undefined : parseFloat(value)
-                          }
-                          : ev
-                      )
-                    )
-                  }}
-                  style={{
-                    width: "140px",
-                    height: "70px",
-                    fontSize: "36px",
-                    fontWeight: "900",
-                    textAlign: "center",
-                    borderRadius: "14px",
-                    border: "2px solid #9ca3af",
-                    marginRight: "12px"
-                  }}
-                />
-
-                <button
-                  onClick={() => handleWork(e.id)}
-                  style={{
-                    fontSize: "26px",
-                    padding: "16px 32px",
-                    margin: "8px",
-                    background: isWorking ? "#f59e0b" : "#16a34a",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "12px",
-                    fontWeight: "bold"
-                  }}
-                >
-                  {isWorking ? "中断" : "開始"}
-                </button>
-
-                <button
-                  onClick={() => completeWork(e.id)}
-                  style={{
-                    fontSize: "22px",
-                    padding: "14px 24px",
-                    margin: "6px"
-                  }}
-                >
-                  工程完了
-                </button>
-
-                {e.isCompleted && (
-                  <button
-                    onClick={() => undoComplete(e.id)}
+                return (
+                  <div
+                    key={`detail-${e.id}`}
                     style={{
-                      fontSize: "22px",
-                      padding: "14px 24px",
-                      margin: "6px"
+                      marginBottom: "18px",
+                      padding: "20px",
+                      borderRadius: "22px",
+                      background: "#fff",
+                      boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+                      border: isWorking
+                        ? "4px solid #f59e0b"
+                        : e.isCompleted
+                          ? "4px solid #9ca3af"
+                          : "4px solid #e5e7eb"
                     }}
                   >
-                    完了解除
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </>
-      )}
-    </div>
+                    <div style={{ fontSize: "42px", fontWeight: "900" }}>
+                      {e.dailyNo}
+                    </div>
+
+                    <div style={{ fontSize: "24px", fontWeight: "800" }}>
+                      {e.process}
+                    </div>
+
+                    <div style={{ fontSize: "20px", fontWeight: "bold" }}>
+                      作業者：{last?.worker || "-"}
+                    </div>
+
+                    <div style={{ fontSize: "20px", fontWeight: "bold" }}>
+                      作業者：{last?.worker || "-"}
+                    </div>
+
+                    <div>自動：{totalWork.toFixed(1)}</div>
+
+                    <div>
+                      実投入：
+                      {e.manualWork !== undefined ? e.manualWork.toFixed(1) : "-"}
+                    </div>
+
+                    <div>
+                      差異：
+                      {e.manualWork !== undefined
+                        ? (e.manualWork - totalWork).toFixed(1)
+                        : "-"}
+                    </div>
+
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.1"
+                      placeholder="0.0"
+                      value={e.manualWork ?? ""}
+                      onChange={(event) => {
+                        const value = event.target.value
+
+                        setEvents(prev =>
+                          prev.map(ev =>
+                            ev.id === e.id
+                              ? {
+                                ...ev,
+                                manualWork: value === "" ? undefined : parseFloat(value)
+                              }
+                              : ev
+                          )
+                        )
+                      }}
+                      style={{
+                        width: "140px",
+                        height: "70px",
+                        fontSize: "36px",
+                        fontWeight: "900",
+                        textAlign: "center",
+                        borderRadius: "14px",
+                        border: "2px solid #9ca3af",
+                        marginRight: "12px"
+                      }}
+                    />
+
+                    <button
+                      onClick={() => handleWork(e.id)}
+                      style={{
+                        fontSize: isMobile ? "24px" : "26px",
+                        padding: isMobile ? "16px 24px" : "16px 32px",
+                        margin: "8px",
+                        minWidth: isMobile ? "130px" : "160px",
+                        background: isWorking ? "#f59e0b" : "#16a34a",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "12px",
+                        fontWeight: "bold"
+                      }}
+                    >
+                      {isWorking ? "中断" : "開始"}
+                    </button>
+
+                    <button
+                      onClick={() => completeWork(e.id)}
+                      style={{
+                        fontSize: "22px",
+                        padding: "14px 24px",
+                        margin: "6px"
+                      }}
+                    >
+                      工程完了
+                    </button>
+
+                    {e.isCompleted && (
+                      <button
+                        onClick={() => undoComplete(e.id)}
+                        style={{
+                          fontSize: "22px",
+                          padding: "14px 24px",
+                          margin: "6px"
+                        }}
+                      >
+                        完了解除
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+          </>
+        )}
+    </>
   )
 }

@@ -301,7 +301,8 @@ export default function TabletView() {
               gap: "12px",
               fontSize: "24px",
               fontWeight: "bold",
-              marginBottom: "12px"
+              marginBottom: "12px",
+              cursor: "pointer"
             }}
           >
             今日のみ
@@ -315,8 +316,8 @@ export default function TabletView() {
 
             <span
               style={{
-                width: "72px",
-                height: "38px",
+                width: "76px",
+                height: "40px",
                 borderRadius: "999px",
                 background: showTodayOnly ? "#16a34a" : "#9ca3af",
                 position: "relative",
@@ -325,18 +326,17 @@ export default function TabletView() {
             >
               <span
                 style={{
-                  width: "30px",
-                  height: "30px",
+                  width: "32px",
+                  height: "32px",
                   borderRadius: "999px",
                   background: "#fff",
                   position: "absolute",
                   top: "4px",
-                  left: showTodayOnly ? "38px" : "4px"
+                  left: showTodayOnly ? "40px" : "4px"
                 }}
               />
             </span>
           </label>
-
           <div style={{
             display: "flex",
             gap: "16px",

@@ -584,33 +584,34 @@ export default function GanttView() {
     info.el.style.color = "#fff"
   }
 
-  return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <div>
-          <div style={styles.appTitle}>工程ガント</div>
-          <div style={styles.subTitle}>
-            生産計画・設備別スケジュール
-          </div>
+return (
+  <div style={styles.page}>
+    <div style={styles.header}>
+      <div>
+        <div style={styles.appTitle}>工程ガント</div>
+        <div style={styles.subTitle}>
+          生産計画・設備別スケジュール
         </div>
+      </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            onClick={() => setScreenMode("tablet")}
-            style={styles.tabletButton}
-          >
-            タブレット
-          </button>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button
+          onClick={() => setScreenMode("tablet")}
+          style={styles.tabletButton}
+        >
+          タブレット
+        </button>
 
-          <button
-            onClick={() => setScreenMode("login")}
-            style={styles.tabletButton}
-          >
-            ログアウト
-          </button>
-        </div>
+        <button
+          onClick={() => setScreenMode("login")}
+          style={styles.tabletButton}
+        >
+          ログアウト
+        </button>
+      </div>
+    </div>
 
-        <div style={styles.statusRow}>
+    <div style={styles.statusRow}>
           <div style={styles.statusCard}>
             <div style={styles.statusLabel}>日報番号件数</div>
             <div style={styles.statusValue}>{dailyNoCount}</div>
@@ -692,9 +693,9 @@ export default function GanttView() {
               style={styles.dangerButton}
             >
               全部リセット
-            </button>
+             </button>
           </div>
-        </div>
+          </div>
 
         <div style={styles.calendarCard}>
           <FullCalendar
@@ -704,8 +705,8 @@ export default function GanttView() {
             locale={jaLocale}
             plugins={[resourceTimelinePlugin, interactionPlugin]}
             initialView="resourceTimelineWeek"
-            initialDate="2026-06-04"
-            height="620px"
+            initialDate={new Date().toISOString().slice(0, 10)}
+            height="100%"
 
             headerToolbar={{
               left: "prev,next today",
@@ -716,6 +717,20 @@ export default function GanttView() {
             titleFormat={{
               year: "numeric",
               month: "long"
+            }}
+
+            slotLaneClassNames={(arg) => {
+               const day = arg.date.getDay()
+               if (day === 0) return ["sunday-lane"]
+               if (day === 6) return ["saturday-lane"]
+               return []
+            }}
+
+            slotLabelClassNames={(arg) => {
+               const day = arg.date.getDay()
+               if (day === 0) return ["sunday-label"]
+               if (day === 6) return ["saturday-label"]
+               return []
             }}
 
             eventMinWidth={90}
@@ -970,7 +985,6 @@ export default function GanttView() {
           </div>
         )}
       </div>
-    </div>
   )
 }
 
@@ -1133,13 +1147,14 @@ export default function GanttView() {
       cursor: "pointer"
   },
 
-      calendarCard: {
-        background: "#fff",
-      borderRadius: "26px",
-      padding: "18px",
-      boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
-      overflow: "hidden"
-  },
+       calendarCard: {
+       height: "calc(100vh - 260px)",
+       background: "#fff",
+       borderRadius: "26px",
+       padding: "18px",
+       boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
+       overflow: "hidden"
+   },
 
       sidePanel: {
         position: "fixed",

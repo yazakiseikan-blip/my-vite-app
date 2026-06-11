@@ -294,21 +294,48 @@ export default function TabletView() {
             設備 {selectedMachine || "-"}
           </h2>
 
-          <button
-            onClick={() => setShowTodayOnly(prev => !prev)}
+          <label
             style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "12px",
               fontSize: "24px",
-              padding: "12px 20px",
-              marginBottom: "12px",
-              borderRadius: "12px",
-              border: "none",
-              background: showTodayOnly ? "#16a34a" : "#e5e7eb",
-              color: showTodayOnly ? "#fff" : "#111827",
-              fontWeight: "bold"
+              fontWeight: "bold",
+              marginBottom: "12px"
             }}
           >
-            {showTodayOnly ? "今日のみ ON" : "今日のみ OFF"}
-          </button>
+            今日のみ
+
+            <input
+              type="checkbox"
+              checked={showTodayOnly}
+              onChange={() => setShowTodayOnly(prev => !prev)}
+              style={{ display: "none" }}
+            />
+
+            <span
+              style={{
+                width: "72px",
+                height: "38px",
+                borderRadius: "999px",
+                background: showTodayOnly ? "#16a34a" : "#9ca3af",
+                position: "relative",
+                display: "inline-block"
+              }}
+            >
+              <span
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  borderRadius: "999px",
+                  background: "#fff",
+                  position: "absolute",
+                  top: "4px",
+                  left: showTodayOnly ? "38px" : "4px"
+                }}
+              />
+            </span>
+          </label>
 
           <div style={{
             display: "flex",

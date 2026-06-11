@@ -53,6 +53,7 @@ export default function TabletView() {
 
   const [inputDailyNo, setInputDailyNo] = useState("")
   const [moveDailyNo, setMoveDailyNo] = useState("")
+  const [showTodayOnly, setShowTodayOnly] = useState(true)
 
   const handleWork = (id) => {
     const now = new Date().toISOString()
@@ -102,6 +103,16 @@ export default function TabletView() {
   }
 
   const filtered = events.filter(e => {
+    const today = new Date().toISOString().slice(0, 10)
+
+    const isToday =
+      String(e.start || "").slice(0, 10) === today ||
+      String(e.end || "").slice(0, 10) === today
+
+    if (showTodayOnly && !isToday) {
+      return false
+    }
+
     const normalSearch =
       inputDailyNo === "" ||
       String(e.dailyNo || "").includes(inputDailyNo)
@@ -283,6 +294,22 @@ export default function TabletView() {
             設備 {selectedMachine || "-"}
           </h2>
 
+          <button
+            onClick={() => setShowTodayOnly(prev => !prev)}
+            style={{
+              fontSize: "24px",
+              padding: "12px 20px",
+              marginBottom: "12px",
+              borderRadius: "12px",
+              border: "none",
+              background: showTodayOnly ? "#16a34a" : "#e5e7eb",
+              color: showTodayOnly ? "#fff" : "#111827",
+              fontWeight: "bold"
+            }}
+          >
+            {showTodayOnly ? "今日のみ ON" : "今日のみ OFF"}
+          </button>
+
           <div style={{
             display: "flex",
             gap: "16px",
@@ -415,7 +442,7 @@ export default function TabletView() {
                     marginRight: "12px"
                   }}
                 />
-              
+
                 <button
                   onClick={() => handleWork(e.id)}
                   style={{

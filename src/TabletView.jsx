@@ -6,7 +6,9 @@ import interactionPlugin from "@fullcalendar/interaction"
 import jaLocale from "@fullcalendar/core/locales/ja"
 
 export default function TabletView() {
-  const [tabletMode, setTabletMode] = useState("work")
+  const [tabletMode, setTabletMode] = useState(
+    localStorage.getItem("tabletMode") || "work"
+  )
 
   const groupOrder = [
     "MC",
@@ -128,8 +130,12 @@ export default function TabletView() {
     <div style={{ padding: "20px", paddingBottom: "120px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
         <div style={{ display: "flex", gap: "12px" }}>
+
           <button
-            onClick={() => setTabletMode("gantt")}
+            onClick={() => {
+              setTabletMode("gantt")
+              localStorage.setItem("tabletMode", "gantt")
+            }}
             style={{
               fontSize: "24px",
               padding: "14px 24px",
@@ -144,7 +150,11 @@ export default function TabletView() {
           </button>
 
           <button
-            onClick={() => setTabletMode("work")}
+            onClick={() => {
+              setTabletMode("work")
+              localStorage.setItem("tabletMode", "work")
+            }}
+
             style={{
               fontSize: "24px",
               padding: "14px 24px",
@@ -195,11 +205,11 @@ export default function TabletView() {
             events={
               Array.isArray(events)
                 ? events.map(e => ({
-                    ...e,
-                    title: `${e.dailyNo || ""} ${e.process || ""}`,
-                    start: e.start,
-                    end: e.end || e.start
-                  }))
+                  ...e,
+                  title: `${e.dailyNo || ""} ${e.process || ""}`,
+                  start: e.start,
+                  end: e.end || e.start
+                }))
                 : []
             }
             headerToolbar={{
@@ -376,31 +386,50 @@ export default function TabletView() {
 
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.1"
-                  placeholder="手入力工数"
+                  placeholder="0.0"
                   value={e.manualWork ?? ""}
                   onChange={(event) => {
-                    const value = parseFloat(event.target.value || 0)
+                    const value = event.target.value
 
                     setEvents(prev =>
                       prev.map(ev =>
                         ev.id === e.id
-                          ? { ...ev, manualWork: value }
+                          ? {
+                            ...ev,
+                            manualWork: value === "" ? undefined : parseFloat(value)
+                          }
                           : ev
                       )
                     )
                   }}
+                  style={{
+                    width: "140px",
+                    height: "70px",
+                    fontSize: "36px",
+                    fontWeight: "900",
+                    textAlign: "center",
+                    borderRadius: "14px",
+                    border: "2px solid #9ca3af",
+                    marginRight: "12px"
+                  }}
                 />
-
+              
                 <button
                   onClick={() => handleWork(e.id)}
                   style={{
                     fontSize: "26px",
                     padding: "16px 32px",
-                    margin: "8px"
+                    margin: "8px",
+                    background: isWorking ? "#f59e0b" : "#16a34a",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "12px",
+                    fontWeight: "bold"
                   }}
                 >
-                  {isWorking ? "終了" : "開始"}
+                  {isWorking ? "中断" : "開始"}
                 </button>
 
                 <button

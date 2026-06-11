@@ -6,6 +6,8 @@ import interactionPlugin from "@fullcalendar/interaction"
 import jaLocale from "@fullcalendar/core/locales/ja"
 
 export default function TabletView() {
+  const isMobile = window.innerWidth < 768
+
   const [tabletMode, setTabletMode] = useState(
     localStorage.getItem("tabletMode") || "work"
   )

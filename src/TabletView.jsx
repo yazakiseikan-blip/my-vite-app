@@ -166,6 +166,24 @@ export default function TabletView() {
               localStorage.setItem("tabletMode", "work")
             }}
 
+            eventClick={(info) => {
+              const clicked = events.find(e => e.id === info.event.id)
+
+              if (!clicked) return
+
+              setSelectedGroup(
+                Object.keys(resourceMaster).find(group =>
+                  resourceMaster[group].includes(clicked.resourceId)
+                ) || null
+              )
+
+              setSelectedMachine(clicked.resourceId)
+              setInputDailyNo(String(clicked.dailyNo || ""))
+
+              setTabletMode("work")
+              localStorage.setItem("tabletMode", "work")
+            }}
+
             style={{
               fontSize: "24px",
               padding: "14px 24px",
@@ -234,6 +252,24 @@ export default function TabletView() {
             eventDurationEditable={false}
             selectable={false}
             displayEventTime={false}
+
+            eventClick={(info) => {
+              const clicked = events.find(e => e.id === info.event.id)
+
+              if (!clicked) return
+
+              setSelectedGroup(
+                Object.keys(resourceMaster).find(group =>
+                  resourceMaster[group].includes(clicked.resourceId)
+                ) || null
+              )
+
+              setSelectedMachine(clicked.resourceId)
+              setInputDailyNo(String(clicked.dailyNo || ""))
+
+              setTabletMode("work")
+              localStorage.setItem("tabletMode", "work")
+            }}
           />
         </div>
       )}
@@ -398,29 +434,56 @@ export default function TabletView() {
               <div
                 key={e.id}
                 style={{
-                  marginBottom: "16px",
-                  padding: "18px",
-                  fontSize: "24px",
-                  borderRadius: "12px",
-                  background: e.isCompleted
-                    ? "#ccc"
-                    : (isWorking ? "#ffe082" : "#eee")
+                  marginBottom: "18px",
+                  padding: "20px",
+                  borderRadius: "22px",
+                  background: "#fff",
+                  boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+                  border: isWorking
+                    ? "4px solid #f59e0b"
+                    : e.isCompleted
+                      ? "4px solid #9ca3af"
+                      : "4px solid #e5e7eb"
                 }}
               >
                 <div style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  color: "#1f2937"
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "12px"
                 }}>
-                  {e.dailyNo}
-                </div>
+                  <div>
+                    <div style={{
+                      fontSize: "42px",
+                      fontWeight: "900",
+                      color: "#111827"
+                    }}>
+                      {e.dailyNo}
+                    </div>
 
-                <div style={{
-                  fontSize: "24px",
-                  marginBottom: "12px",
-                  color: "#374151"
-                }}>
-                  {e.process}
+                    <div style={{
+                      fontSize: "24px",
+                      fontWeight: "800",
+                      color: "#374151"
+                    }}>
+                      {e.process}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    fontSize: "20px",
+                    fontWeight: "900",
+                    padding: "8px 14px",
+                    borderRadius: "999px",
+                    background: isWorking
+                      ? "#f59e0b"
+                      : e.isCompleted
+                        ? "#9ca3af"
+                        : "#16a34a",
+                    color: "#fff"
+                  }}>
+                    {isWorking ? "作業中" : e.isCompleted ? "完了" : "未開始"}
+                  </div>
                 </div>
 
                 <div>自動：{totalWork.toFixed(1)}</div>

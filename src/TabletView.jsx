@@ -4,6 +4,7 @@ import FullCalendar from "@fullcalendar/react"
 import resourceTimelinePlugin from "@fullcalendar/resource-timeline"
 import interactionPlugin from "@fullcalendar/interaction"
 import jaLocale from "@fullcalendar/core/locales/ja"
+import "./App.css";
 
 export default function TabletView() {
   const isMobile = window.innerWidth < 768
@@ -38,11 +39,14 @@ export default function TabletView() {
     その他: ["打ち合わせ"]
   }
   const workerMaster = {
-    MC: ["片野", "野田"],
+    MC: ["片野", "野田", "志賢", "三成"],
     ラジアル: ["志賢"],
     研磨: ["志賢"],
-    放電: ["胡"],
-    ワイヤ: ["松本"]
+    放電: ["胡", "孫", "松本", "藤巻"],
+    ワイヤ: ["胡", "孫", "松本", "藤巻", "志賢"],
+    HW: ["恭平", "桶川", "高塚", "山口", "高橋"],
+    CAM: ["勝亦", "井上", "集", "森切", "三成"],
+    検査: ["内藤", "柴田"],
   }
 
 
@@ -56,6 +60,7 @@ export default function TabletView() {
 
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [selectedMachine, setSelectedMachine] = useState(null)
+  const [selectedEvent, setSelectedEvent] = useState(null)
   const [selectedWorker, setSelectedWorker] = useState("")
 
   const setScreenMode = useStore(s => s.setScreenMode)
@@ -228,6 +233,24 @@ export default function TabletView() {
             schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
             locale={jaLocale}
             plugins={[resourceTimelinePlugin, interactionPlugin]}
+
+            slotLaneClassNames={(arg) => {
+              const day = arg.date.getDay()
+
+              if (day === 0) return ["sunday-lane"]
+              if (day === 6) return ["saturday-lane"]
+
+              return []
+            }}
+
+            slotLabelClassNames={(arg) => {
+              const day = arg.date.getDay()
+
+              if (day === 0) return ["sunday-label"]
+              if (day === 6) return ["saturday-label"]
+
+              return []
+            }}
             initialView="resourceTimelineWeek"
             height="650px"
             resources={resources}
@@ -253,29 +276,210 @@ export default function TabletView() {
             selectable={false}
             displayEventTime={false}
 
+            eventDidMount={(info) => {
+              let pressTimer = null
+
+              info.el.addEventListener("dblclick", (ev) => {
+                ev.preventDefault()
+
+                const clicked = events.find(e => String(e.id) === String(info.event.id))
+                if (!clicked) return
+
+                const machine = clicked.resourceId || info.event.getResources?.()[0]?.id
+
+                setSelectedGroup(
+                  Object.keys(resourceMaster).find(group =>
+                    resourceMaster[group].includes(machine)
+                  ) || null
+                )
+
+                setSelectedMachine(machine)
+                setInputDailyNo(String(clicked.dailyNo || ""))
+                setMoveDailyNo("")
+                setShowTodayOnly(false)
+
+                setTabletMode("work")
+                localStorage.setItem("tabletMode", "work")
+              })
+
+              info.el.addEventListener("mousedown", () => {
+                pressTimer = setTimeout(() => {
+                  const clicked = events.find(e => String(e.id) === String(info.event.id))
+                  if (!clicked) return
+
+                  const reason = window.prompt(
+                    "追加理由\n設計変更 / 割込み / 手直し / 設備トラブル / 測定NG"
+                  )
+
+                  if (!reason) return
+
+                  const newEvent = {
+                    ...clicked,
+
+                    title: `${clicked.dailyNo} ${clicked.process}【${reason}】`,
+                    process: `${clicked.process}【${reason}】`,
+
+                    id: crypto.randomUUID(),
+
+                    isAdditional: true,
+                    additionalReason: reason,
+
+                    registeredBy: "現場",
+
+                    isCompleted: false,
+                    workLogs: [],
+
+                    createdAt: new Date().toISOString()
+                  }
+
+                  setEvents(prev => [...prev, newEvent])
+
+                  alert("追加工程を作成しました")
+                }, 1000)
+              })
+
+              info.el.addEventListener("mouseup", () => {
+                clearTimeout(pressTimer)
+              })
+
+              info.el.addEventListener("mouseleave", () => {
+                clearTimeout(pressTimer)
+              })
+
+              info.el.addEventListener("touchstart", () => {
+                pressTimer = setTimeout(() => {
+                  const clicked = events.find(
+                    e => String(e.id) === String(info.event.id))
+
+                  if (!clicked) return
+
+                  alert("追加工程作成")
+                }, 1000)
+              })
+
+              info.el.addEventListener("touchend", () => {
+                clearTimeout(pressTimer)
+              })
+            }}
+
             eventClick={(info) => {
-              const clicked = events.find(e => String(e.id) === String(info.event.id))
-              if (!clicked) return
-
-              const machine = clicked.resourceId || info.event.getResources?.()[0]?.id
-
-              setSelectedGroup(
-                Object.keys(resourceMaster).find(group =>
-                  resourceMaster[group].includes(machine)
-                ) || null
+              const clicked = events.find(
+                e => String(e.id) === String(info.event.id)
               )
 
-              setSelectedMachine(machine)
-              setInputDailyNo(String(clicked.dailyNo || ""))
-              setMoveDailyNo("")
-              setShowTodayOnly(false)
+              if (!clicked) return
 
-              setTabletMode("work")
-              localStorage.setItem("tabletMode", "work")
+              setSelectedEvent(clicked)
             }}
           />
-        </div>
 
+          {selectedEvent && (() => {
+            const sameDailyEvents = events.filter(
+              e => String(e.dailyNo) === String(selectedEvent.dailyNo)
+            )
+
+            const selectedIndex = sameDailyEvents.findIndex(
+              e => String(e.id) === String(selectedEvent.id)
+            )
+
+            const getStatus = (e) => {
+              const last = e.workLogs?.[e.workLogs.length - 1]
+              const isWorking = last && !last.end && !e.isCompleted
+
+              if (e.isCompleted) return "完了"
+              if (isWorking) return "作業中"
+              return "未着手"
+            }
+
+            const previous = sameDailyEvents.slice(0, selectedIndex)
+            const current = sameDailyEvents[selectedIndex]
+            const next = sameDailyEvents.slice(selectedIndex + 1)
+
+            return (
+              <div
+                style={{
+                  marginTop: "16px",
+                  padding: "18px",
+                  borderRadius: "18px",
+                  background: "#fff",
+                  boxShadow: "0 8px 20px rgba(0,0,0,0.12)"
+                }}
+              >
+                <div style={{ fontSize: "28px", fontWeight: "900", marginBottom: "16px" }}>
+                  日報No：{selectedEvent.dailyNo}
+                </div>
+
+                <div style={{ fontSize: "22px", fontWeight: "900", marginTop: "12px" }}>
+                  前工程
+                </div>
+
+                {previous.length === 0 ? (
+                  <div>なし</div>
+                ) : (
+                  previous.map(e => (
+                    <div key={`prev-${e.id}`} style={{ marginBottom: "10px" }}>
+                      <div>
+                        {e.isCompleted ? "✓" : getStatus(e) === "作業中" ? "▶" : "□"}{" "}
+                        {e.resourceId}　{getStatus(e)}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          color: "#6b7280",
+                          marginLeft: "22px"
+                        }}
+                      >
+                        {String(e.start).slice(0, 10)}
+                        {" ～ "}
+                        {String(e.end || e.start).slice(0, 10)}
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                <div style={{ fontSize: "22px", fontWeight: "900", marginTop: "12px" }}>
+                  現在工程
+                </div>
+
+                {current && (
+                  <div>
+                    {current.isCompleted ? "✓" : getStatus(current) === "作業中" ? "▶" : "□"}{" "}
+                    {current.resourceId}　{getStatus(current)}
+                  </div>
+                )}
+
+                <div style={{ fontSize: "22px", fontWeight: "900", marginTop: "12px" }}>
+                  後工程
+                </div>
+
+                {next.length === 0 ? (
+                  <div>なし</div>
+                ) : (
+                  next.map(e => (
+                    <div key={`prev-${e.id}`}>
+                      <div>
+                        □ {e.resourceId}　{getStatus(e)}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          color: "#6b7280",
+                          marginLeft: "22px"
+                        }}
+                      >
+                        {String(e.start).slice(0, 10)}
+                        {" ～ "}
+                        {String(e.end || e.start).slice(0, 10)}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )
+          })()}
+        </div>
       )
       }
 
@@ -544,10 +748,6 @@ export default function TabletView() {
 
                     <div style={{ fontSize: "24px", fontWeight: "800" }}>
                       {e.process}
-                    </div>
-
-                    <div style={{ fontSize: "20px", fontWeight: "bold" }}>
-                      作業者：{last?.worker || "-"}
                     </div>
 
                     <div style={{ fontSize: "20px", fontWeight: "bold" }}>

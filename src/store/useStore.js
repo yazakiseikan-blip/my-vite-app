@@ -8,6 +8,10 @@ export const useStore = create(
 
       events: [],
 
+      plans: [],
+      actualLogs: [],
+      changeLogs: [],
+
       screenMode: 'login',
 
       setEvents: (updater) =>
@@ -15,6 +19,30 @@ export const useStore = create(
           events:
             typeof updater === "function"
               ? updater(state.events)
+              : updater
+        })),
+
+      setPlans: (updater) =>
+        set((state) => ({
+          plans:
+            typeof updater === "function"
+              ? updater(state.plans)
+              : updater
+        })),
+
+      setActualLogs: (updater) =>
+        set((state) => ({
+          actualLogs:
+            typeof updater === "function"
+              ? updater(state.actualLogs)
+              : updater
+        })),
+
+      setChangeLogs: (updater) =>
+        set((state) => ({
+          changeLogs:
+            typeof updater === "function"
+              ? updater(state.changeLogs)
               : updater
         })),
 

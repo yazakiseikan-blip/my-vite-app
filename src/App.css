@@ -17,21 +17,21 @@
   }
 }
 
-.sunday-lane {
+.fc .fc-timeline-slot.sunday-lane {
   background-color: #ffe5e5 !important;
 }
 
-.saturday-lane {
+.fc .fc-timeline-slot.saturday-lane {
   background-color: #e6f2ff !important;
 }
 
-.sunday-label {
-  background-color: #ffe5e5 !important;
+.fc .sunday-label {
+  background: #ffe5e5 !important;
   color: #b91c1c !important;
 }
 
-.saturday-label {
-  background-color: #e6f2ff !important;
+.fc .saturday-label {
+  background: #e6f2ff !important;
   color: #1d4ed8 !important;
 }
 
